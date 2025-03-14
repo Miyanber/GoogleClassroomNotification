@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --black: #333;
+        }
+
+        header {
+            color: var(--black);
+            border-bottom: var(--black) 1px solid;
+            background-color: #eee;
+
+            .author {
+                font-size: 0.8em;
+                text-align: right;
+                padding: 0.5em;
+            }
+
+            h1 {
+                margin: 0;
+                font-size: 1.5em;
+                text-align: center;
+                padding: 1em 0 0;
+
+                span {
+                    display: inline-block;
+                }
+            }
+        }
+
+        section {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        #form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        section {
+            padding: 0 1em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>
+            <span>Google Classroom </span>
+            <span>メール通知送信システム</span>
+        </h1>
+        <div class="author">※試験運用中 by Miyanber</div>
+    </header>
+
+    <section>
+        <h2>サービス内容</h2>
+        <p>
+            GoogleClassroomの通知をメールで受け取ることができます。
+        </p>
+    </section>
+    <section>
+        <h2>設定</h2>
+        <p>
+            通知を受け取りたい時間を選択して下さい。
+        <ul>
+            <li>システムの都合上、メールの送信は指定した時刻から±15分程度ずれる場合があります。</li>
+        </ul>
+        </p>
+        <form id="form" action="<? getAppUrl() ?>" method="post">
+            <label for="time">通知時間</label>
+            <input type="time" name="time" id="time">
+            <label for="email">メールアドレス</label>
+            <input type="email" name="email" id="email" placeholder="example@example.com">
+            <button type="submit" id="submit">設定を開始</button>
+        </form>
+    </section>
+
+    <script>
+        const form = document.getElementById('form');
+        const submitButton = document.getElementById('submit');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitButton.disabled = true;
+            const time = document.getElementById('time').value;
+            const email = document.getElementById('email').value;
+            console.log(time);
+            if (time === '' || email === '') {
+                alert('フォームを入力してください。');
+                submitButton.disabled = false;
+                return;
+            }
+            google.script.run.withSuccessHandler(() => {
+                submitButton.disabled = false;
+                alert('設定が完了しました。');
+            }).saveUser(time, email);
+        });
+    </script>
+</body>
+
+</html>
