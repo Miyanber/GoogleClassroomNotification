@@ -1,8 +1,42 @@
 const now = new Date();
 const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-function doGet() {
+function doGet(e) {
     let template = HtmlService.createTemplateFromFile("index");
+    const accountEmail = Session.getActiveUser().getEmail();
+
+    var service = getService(accountEmail);
+    if (service.hasAccess()) {
+        const spreadsheet = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI');
+        const sheet = spreadsheet.getSheetByName('Sheet1');
+        let values;
+        const exists = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues().some((row, index) => {
+            if (row[0] == accountEmail) {
+                range = sheet.getRange(index + 2, 1, 1, sheet.getLastColumn());
+                values = range.getValues();
+                return true;
+            }
+        });
+        Logger.log(values);
+
+        if (exists === true) {
+            const email = values[0][1];
+            const timeDate = new Date(values[0][2]);
+            const time = `${timeDate.getHours()}:${timeDate.getMinutes()}`;
+            template.email = email;
+            template.time = time;
+            Logger.log(`Email: ${template.email}, Time: ${ template.time}`);
+        } else {
+            template.email = "";
+            template.time = "";
+        }
+    } else {
+        template.email = "";
+        template.time = "";
+    }
+
+    template.activeUserEmail = accountEmail;
+
     return template.evaluate();
 }
 
@@ -11,23 +45,31 @@ function saveUser(time, email) {
     const spreadsheet = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI');
     const sheet = spreadsheet.getSheetByName('Sheet1');
     let range;
+    const accountEmail = Session.getActiveUser().getEmail();
 
-    const hasAlreadySaved = sheet.getRange(2, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues().some(row => {
-        if (row[0] == email) {
-            range = sheet.getRange(sheet.getLastRow(), 2);
-            range.setValue(time);
+    const hasAlreadySaved = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues().some((row, index) => {
+        if (row[0] == accountEmail) {
+            range = sheet.getRange(index + 2, 1, 1, 3);
+            range.setValues([[accountEmail, email, time]]);
             return true;
         }
     })
 
     if (!hasAlreadySaved) {
-        range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, 2);
-        range.setValues([[email, time]]);
+        range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, 3);
+        range.setValues([[accountEmail, email, time]]);
     }
 
     Logger.log(`Saved: ${email}, ${time}`);
 
-    return "設定を保存しました";
+    const service = getService(accountEmail);
+    if (service.hasAccess()) {
+        Logger.log('already authorized');
+        return null;
+    } else {
+        Logger.log('start authorization');
+        return service.getAuthorizationUrl(accountEmail);
+    }
 }
 
 function getAppUrl() {
@@ -40,8 +82,8 @@ function main() {
     const data = sheet.getRange(2, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
 
     data.forEach(row => {
-        const email = row[0];
-        const time = row[1];
+        const email = row[1];
+        const time = row[2];
         const hours = parseInt(time.split(":")[0], 10);
         const minutes = parseInt(time.split(":")[1], 10);
 
@@ -124,18 +166,55 @@ function toBrTag(text) {
     return text.replace(/\n/g, "<br>");
 }
 
+// ここから下はOAuth2関連の関数
 
+function getService(accountEmail) {
+    if (accountEmail == null) {
+        return null;
+    }
+    return OAuth2.createService('GoogleClassroom_' + accountEmail)
+        .setAuthorizationBaseUrl('https://accounts.google.com/o/oauth2/auth')
+        .setTokenUrl('https://accounts.google.com/o/oauth2/token')
+        .setClientId(PropertiesService.getScriptProperties().getProperty('CLIENT_ID'))
+        .setClientSecret(PropertiesService.getScriptProperties().getProperty('CLIENT_SECRET'))
+        .setCallbackFunction('authCallback')
+        .setPropertyStore(PropertiesService.getUserProperties())
+        .setScope('https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.announcements.readonly https://www.googleapis.com/auth/classroom.rosters.readonly https://www.googleapis.com/auth/classroom.coursework.students.readonly https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly')
 
+        // Requests offline access.
+        .setParam('access_type', 'offline')
 
+        // Consent prompt is required to ensure a refresh token is always
+        // returned when requesting offline access.
+        .setParam('prompt', 'consent')
 
-// Google Chat に通知（任意）
-function sendGoogleChatNotification(message) {
-    const webhookUrl = "YOUR_WEBHOOK_URL"; // Google Chat のWebhook URL
-    const payload = JSON.stringify({ text: message });
+        .setCache(CacheService.getUserCache())
+}
 
-    UrlFetchApp.fetch(webhookUrl, {
-        method: "post",
-        contentType: "application/json",
-        payload: payload
-    });
+// OAuth2認証のコールバック関数
+function authCallback(request) {
+    var service = getService(Session.getActiveUser().getEmail());
+    var isAuthorized = service.handleCallback(request);
+    if (isAuthorized) {
+        const spreadsheet = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI');
+        const sheet = spreadsheet.getSheetByName('Sheet1');
+        sheet.getRange(2, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues().some((row, index) => {
+            if (row[0] == accountEmail) {
+                range = sheet.getRange(index + 2, 4);
+                range.setValue('True');
+                return true;
+            }
+        })
+        return HtmlService.createHtmlOutput('認証が完了しました。このウィンドウを閉じてください。');
+    } else {
+        return HtmlService.createHtmlOutput('認証に失敗しました。');
+    }
+}
+
+// 認証を開始するための関数
+function startOAuth2(email) {
+    var service = getService(email);
+    var authorizationUrl = service.getAuthorizationUrl(email);
+    Logger.log('認証URL: ' + authorizationUrl);
+    return authorizationUrl;
 }

@@ -109,17 +109,35 @@
         <h2>設定</h2>
         <p>
             通知を受け取りたい時間を選択して下さい。
-        <ul>
-            <li>システムの都合上、メールの送信は指定した時刻から±15分程度ずれる場合があります。</li>
-        </ul>
+            <ul>
+                <li>システムの都合上、メールの送信は指定した時刻から±15分程度ずれる場合があります。</li>
+            </ul>
+        </p>
+        <p class="activeUser">
+            現在 <?= activeUserEmail ?> でログインしています。
         </p>
         <form id="form" action="<? getAppUrl() ?>" method="post">
             <label for="time">通知時間</label>
-            <input type="time" name="time" id="time">
+            <input type="time" name="time" id="time" value="<?= time ?>" required>
             <label for="email">メールアドレス</label>
-            <input type="email" name="email" id="email" placeholder="example@example.com">
+            <input type="email" name="email" id="email" placeholder="example@example.com" value="<?= email ?>" required>
             <button type="submit" id="submit">設定を開始</button>
         </form>
+
+        <div class="oauth">
+            <h2>テストメールを送信</h2>
+            <p>
+                ここからテストメールを送信できます。指定したメールアドレスにメールが送信されることを確認してください。<br>
+                ※メールが送信されない場合は、以下の原因が考えられます。
+                <ul>
+                    <li>メールが迷惑メールと判断されている</li>
+                    <li>メールアドレスが正しく入力されていない</li>
+                    <li>メールアドレスが受信拒否設定されている</li>
+                    <li>メールアドレスが存在しない</li>
+                </ul>
+            </p>
+        </div>
+
     </section>
 
     <script>
@@ -136,11 +154,20 @@
                 submitButton.disabled = false;
                 return;
             }
-            google.script.run.withSuccessHandler(() => {
-                submitButton.disabled = false;
-                alert('設定が完了しました。');
+            google.script.run.withSuccessHandler(result => {
+                if (result != null) {
+                    alert('Google Classroomにアクセスする権限が必要です。次に表示される画面で権限を許可してください。');
+                    submitButton.disabled = false;
+                    window.open(result);
+                } else {
+                    submitButton.disabled = false;
+                    alert('設定が完了しました。');
+                }
             }).saveUser(time, email);
+
+            console.log('submit');
         });
+
     </script>
 </body>
 
