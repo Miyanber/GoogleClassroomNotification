@@ -141,7 +141,7 @@
                 <? if (post.type == "ANNOUNCEMENTS") { ?>
                 <div class="post announcement">
                     <div class="teacher">
-                        <img class="userIcon" src="https://<?= Classroom.UserProfiles.get(post.creatorUserId).photoUrl.split("//")[1].replace("=mo", "") ?>=s72" alt="assignment">
+                        <img class="userIcon" src="https://<?= fetchWrapper(accessToken, `userProfiles/${post.creatorUserId}`).photoUrl.split("//")[1].replace("=mo", "") ?>=s72" alt="assignment">
                         <span class="teacherName">
                             <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?>
                         </span>
@@ -172,7 +172,7 @@
                 <? } else if (post.type == "WORKS") { ?>
                 <div class="post works">
                     <div class="header">
-                        <img class="materialIcon" src="cid:assignmentIcon" alt="assignment">
+                        <img class="materialIcon" src="https://classroom-notification.s3.ap-northeast-1.amazonaws.com/assignment_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24+(1).png" alt="assignment">
                         <span class="title">
                             <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?> 先生からの課題 : <?= post.title ?>
                         </span>
@@ -203,7 +203,7 @@
                 <? } else { ?>
                 <div class="post workMaterials">
                     <div class="header">
-                        <img class="materialIcon" src="cid:bookIcon" alt="book">
+                        <img class="materialIcon" src="https://classroom-notification.s3.ap-northeast-1.amazonaws.com/book_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24+(1).png" alt="book">
                         <span class="title">
                             <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?> 先生からの資料 : <?= post.title ?>
                         </span>
@@ -237,8 +237,9 @@
         </div>
         <? } ?>
         <? } ?>
+
         <p class="note">※ 詳細はGoogle Classroomで確認してください。</p>
-        </div>
+    </section>
 </body>
 
 </html>
