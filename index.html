@@ -8,6 +8,9 @@
     <style>
         body {
             margin: 0;
+        }
+
+        * {
             box-sizing: border-box;
         }
 
@@ -51,10 +54,12 @@
 
         #form {
             background: #fff;
-            padding: 20px;
+            padding: 1em;
+            margin: 0 auto;
             border-radius: 8px;
-            /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
+            width: max-content;
         }
 
         label {
@@ -64,7 +69,8 @@
         }
 
         input {
-            width: 100%;
+            width: 30em;
+            max-width: 100%;
             padding: 8px;
             margin-top: 5px;
             border: 1px solid #ccc;
@@ -73,6 +79,8 @@
         }
 
         button {
+            display: block;
+            margin: 0 auto;
             margin-top: 15px;
             background-color: #28a745;
             color: white;
@@ -124,7 +132,7 @@
     <div class="section">
         <h2>サービス内容</h2>
         <p>
-            過去24時間以内に更新された GoogleClassroom のお知らせや課題等について、指定した時刻に毎日メール通知を受け取れます。
+            過去24時間以内に更新された GoogleClassroom のお知らせや課題等について、指定した時刻に毎日メール通知を受け取ることができます。
         </p>
     </div>
 
@@ -135,8 +143,8 @@
             <ul>
                 <li><strong>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信できないため利用できません。</strong></li>
                 <li>システムの都合上、メールの送信は指定した時刻から±5分程度程度ずれる場合があります。</li>
+                <li>設定はログイン中の Google アカウント（<?= activeUserEmail ?>）に保存されます。</li>
                 <li>メールの送信元は <? PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。</li>
-                <li>設定はログイン中の Google アカウント（<strong><?= activeUserEmail ?></strong>）に保存されます。</li>
             </ul>
         </p>
         <form id="form" action="<? getAppUrl() ?>" method="post">
@@ -149,26 +157,33 @@
     </div>
 
     <div class="section">
-        <div class="oauth">
-            <h2>テストメールを送信</h2>
-            <p>
-                ここからテストメールを送信できます。指定したメールアドレスにメールが送信されることを確認してください。<br>
-            </p>
-            <p>
-                ※メールが送信されない場合は、以下の原因が考えられます。
-                <ul>
-                    <li>テストメールが迷惑メールと判断されている</li>
-                    <li>メールアドレスが正しく入力されていない</li>
-                    <li>メールアドレスが受信拒否設定されている</li>
-                </ul>
-                特に、迷惑メールと判断されている可能性が高いです。利用しているメールアプリの迷惑メールボックスにテストメールが入っていないか確認して下さい。
-                なお、メールの送信元は <? PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
-            </p>
-            <div class="testMail-div">
-                <button type="button" id="testMail">テストメールを送信</button>
-            </div>
+        <h2>テストメールを送信</h2>
+        <p>
+            ここからテストメールを送信できます。指定したメールアドレスにメールが送信されることを確認してください。<br>
+        </p>
+        <p>
+            ※メールが送信されない場合は、以下の原因が考えられます。
+            <ul>
+                <li>テストメールが迷惑メールと判断されている</li>
+                <li>メールアドレスが正しく入力されていない</li>
+                <li>メールアドレスが受信拒否設定されている</li>
+            </ul>
+            特に、迷惑メールと判断されている可能性が高いです。利用しているメールアプリの迷惑メールボックスにテストメールが入っていないか確認して下さい。
+            なお、メールの送信元は <? PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
+        </p>
+        <div class="testMail-div">
+            <button type="button" id="testMail">テストメールを送信</button>
         </div>
 
+    </div>
+
+    <div class="section">
+        <h2>プライバシーポリシー</h2>
+        <p>
+            このシステムでは、ログイン中の Google アカウントが所属する Google Classroom のクラスのお知らせや課題・資料にアクセスする権限を必要とします。
+            なお、このシステムで必要とする全ての権限について、本サービス以外に利用することはありません。プライバシーポリシーに関して質問があれば、ページ下部の問い合わせフォームからご連絡ください。
+            <br>令和7年3月17日更新
+        </p>
     </div>
 
     <div class="footer">
@@ -196,7 +211,7 @@
                     alert('メールが送信できません。先に設定を行ってください。既に設定を行っている場合は、メールアドレスに誤りがないか確認して下さい。');
                     testMailButton.disabled = false;
                 } else {
-                    alert('テストメールを送信しました。設定したメールアドレスにテストメールが届いていることを確認して下さい。');
+                    alert(`テストメールを送信しました。設定したメールアドレスにテストメールが届いていることを確認して下さい。`);
                     testMailButton.disabled = false;
                 }
             }).testMail();
@@ -220,12 +235,12 @@
             }
             google.script.run.withSuccessHandler(result => {
                 if (result != null) {
-                    alert('Google Classroomにアクセスする権限が必要です。次に表示される画面で権限を許可してください。');
+                    alert('通知時間・メールアドレスが設定できました。次に Google Classroomにアクセスする権限が必要です。次に表示される画面で権限を許可してください。');
                     submitButton.disabled = false;
                     window.open(result);
                 } else {
                     submitButton.disabled = false;
-                    alert('設定が完了しました。');
+                    alert('設定が完了しました。メールアドレスを設定・変更した場合は、一度テストメールを送信し、正しくメールを受け取れるかチェックすることをお勧めします。');
                 }
             }).saveUser(time, email);
 
