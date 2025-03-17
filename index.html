@@ -15,7 +15,7 @@
             --black: #333;
         }
 
-        header {
+        .header {
             color: var(--black);
             border-bottom: var(--black) 1px solid;
             background-color: #eee;
@@ -38,9 +38,10 @@
             }
         }
 
-        section {
+        .section {
             max-width: 800px;
             margin: 2em auto;
+            padding: 0 1em;
 
             h2 {
                 border-left: #aaa solid .3em;
@@ -93,10 +94,6 @@
             cursor: not-allowed;
         }
 
-        section {
-            padding: 0 1em;
-        }
-
         .testMail-div {
             text-align: center;
         }
@@ -105,7 +102,7 @@
             text-align: center;
         }
 
-        .footer {
+        .copyright {
             border-top: var(--black) 1px solid;
             background-color: #eee;
             padding: 1em;
@@ -116,42 +113,42 @@
 
 <body>
 
-    <header>
+    <div class="header">
         <h1>
             <span>Google Classroom </span>
             <span>メール通知送信システム</span>
         </h1>
         <div class="author">Classroom Summary Notification ※試験運用中 by Miyanber</div>
-    </header>
+    </div>
 
-    <section>
+    <div class="section">
         <h2>サービス内容</h2>
         <p>
-            GoogleClassroom の通知をメールで受け取ることができます。
+            過去24時間以内に更新された GoogleClassroom のお知らせや課題等について、指定した時刻に毎日メール通知を受け取れます。
         </p>
-    </section>
+    </div>
 
-    <section>
+    <div class="section">
         <h2>設定</h2>
         <p>
-            通知を受け取りたい時間を選択して下さい。
+            メール通知を受け取りたい時間とメールアドレスを入力して下さい。
             <ul>
-                <li>システムの都合上、メールの送信は指定した時刻から±5分程度ずれる場合があります。</li>
-                <li>設定はログイン中の Google アカウント（<strong><?= activeUserEmail ?></strong>）に保存されます。</li>
+                <li><strong>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信できないため利用できません。</strong></li>
+                <li>システムの都合上、メールの送信は指定した時刻から±5分程度程度ずれる場合があります。</li>
                 <li>メールの送信元は <? PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。</li>
-                <li>学校の Google アカウントのメールアドレスは利用できません。</li>
+                <li>設定はログイン中の Google アカウント（<strong><?= activeUserEmail ?></strong>）に保存されます。</li>
             </ul>
         </p>
         <form id="form" action="<? getAppUrl() ?>" method="post">
             <label for="time">通知時間</label>
             <input type="time" name="time" id="time" value="<?= time ?>" required>
-            <label for="email">通知を受け取るメールアドレス</label>
+            <label for="email">メールアドレス</label>
             <input type="email" name="email" id="email" placeholder="example@example.com" value="<?= email ?>" required>
-            <button type="submit" id="submit">設定を開始</button>
+            <button type="submit" id="submit">設定</button>
         </form>
-    </section>
+    </div>
 
-    <section>
+    <div class="section">
         <div class="oauth">
             <h2>テストメールを送信</h2>
             <p>
@@ -172,19 +169,19 @@
             </div>
         </div>
 
-    </section>
+    </div>
 
-    <footer>
+    <div class="footer">
         <p class="formLink">
             お問い合わせは<a href="https://forms.gle/958ymti7rCXjuVUq5">こちら</a>からどうぞ。<br>
             <strong>メールの配信停止はこちらのフォームからお願いします。</strong><br>
             ※学校のGoogleアカウントでログインしないと回答できません。
         </p>
 
-        <div class="footer">
+        <div class="copyright">
             &copy; 2025 Miyanber
         </div>
-    </footer>
+    </div>
 
     <script>
         const form = document.getElementById('form');
@@ -214,6 +211,10 @@
             console.log(time);
             if (time === '' || email === '') {
                 alert('フォームを入力してください。');
+                submitButton.disabled = false;
+                return;
+            } else if (email.includes("rakunan-h.ed.jp")) {
+                alert('学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信することができません。他のメールアドレスをご入力ください。');
                 submitButton.disabled = false;
                 return;
             }
