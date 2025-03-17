@@ -141,7 +141,7 @@
                 <? if (post.type == "ANNOUNCEMENTS") { ?>
                 <div class="post announcement">
                     <div class="teacher">
-                        <img class="userIcon" src="https://<?= fetchWrapper(accessToken, `userProfiles/${post.creatorUserId}`).photoUrl.split("//")[1].replace("=mo", "") ?>=s72" alt="assignment">
+                        <img class="userIcon" src="<?= getPhotoUrl(accessToken, post.creatorUserId) ?>" alt="assignment">
                         <span class="teacherName">
                             <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?>
                         </span>

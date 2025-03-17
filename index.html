@@ -181,9 +181,18 @@
         <h2>プライバシーポリシー</h2>
         <p>
             このシステムでは、ログイン中の Google アカウントが所属する Google Classroom のクラスのお知らせや課題・資料にアクセスする権限を必要とします。
+            許可した権限は、「その他」→「このシステムから権限を削除」で許可を取り消すことができます。
+            ただし、必要な権限を許可しない場合、メール通知が届かない可能性があります。
             なお、このシステムで必要とする全ての権限について、本サービス以外に利用することはありません。プライバシーポリシーに関して質問があれば、ページ下部の問い合わせフォームからご連絡ください。
             <br>令和7年3月17日更新
         </p>
+    </div>
+
+    <div class="section">
+        <h2>その他</h2>
+        <ul>
+            <li><a href="" onclick="resetOAuth();">このシステムから権限を削除</a></li>
+        </ul>
     </div>
 
     <div class="footer">
@@ -246,6 +255,13 @@
 
             console.log('submit');
         });
+
+        function resetOAuth() {
+            google.script.run.withSuccessHandler(result => {
+                alert('このシステムから権限を削除しました。メールを受信したい場合、再度設定を行ってください。');
+                submitButton.disabled = false;
+            }).resetOAuth();
+        }
 
     </script>
 </body>

@@ -108,8 +108,11 @@ function sendReminder(accountEmail, email) {
         template.courses = getTodayUpdates(accessToken);
         template.accessToken = accessToken;
     } else {
+        Logger.log("Unauthorized");
         template.courses = [];
         template.accessToken = "";
+        // ここで再認証を行うURLをテンプレートに渡して再認証させる
+        // そもそものGoogle認証も、テストメールに含ませた方が理想的？
     }
 
     const html = template.evaluate().getContent();
@@ -251,6 +254,23 @@ function zeroPadding(numbner) {
     return numbner;
 }
 
+function getPhotoUrl(accessToken, userId) {
+    let url = "https://";
+    const userProfile = fetchWrapper(accessToken, `userProfiles/${userId}`);
+    if ("photoUrl" in userProfile) {
+        url += photoUrl.split("//")[1].replace("=mo", "");
+        url += "=s72";
+        return url
+    } else {
+        return null;
+    }
+}
+
+function resetOAuth() {
+    const service = getOAuthService(Session.getActiveUser().getEmail());
+    service.reset();
+}
+
 // ##### ここから下はOAuth2関連の関数 #####
 
 
@@ -265,7 +285,7 @@ function getOAuthService(accountEmail) {
         .setClientSecret(PropertiesService.getScriptProperties().getProperty('CLIENT_SECRET'))
         .setCallbackFunction('authCallback')
         .setPropertyStore(PropertiesService.getUserProperties())
-        .setScope('https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.announcements https://www.googleapis.com/auth/classroom.profile.photos https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly ')
+        .setScope('https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.announcements https://www.googleapis.com/auth/classroom.rosters.readonly https://www.googleapis.com/auth/classroom.profile.photos https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly ')
 
         // Requests offline access.
         .setParam('access_type', 'offline')
