@@ -144,10 +144,10 @@
                 <li><strong>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信できないため利用できません。</strong></li>
                 <li>システムの都合上、メールの送信は指定した時刻から±5分程度程度ずれる場合があります。</li>
                 <li>設定はログイン中の Google アカウント（<?= activeUserEmail ?>）に保存されます。</li>
-                <li>メールの送信元は <? PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。</li>
+                <li>メールの送信元は <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。</li>
             </ul>
         </p>
-        <form id="form" action="<? getAppUrl() ?>" method="post">
+        <form id="form" action="" method="post">
             <label for="time">通知時間</label>
             <input type="time" name="time" id="time" value="<?= time ?>" required>
             <label for="email">メールアドレス</label>
@@ -169,7 +169,7 @@
                 <li>メールアドレスが受信拒否設定されている</li>
             </ul>
             特に、迷惑メールと判断されている可能性が高いです。利用しているメールアプリの迷惑メールボックスにテストメールが入っていないか確認して下さい。
-            なお、メールの送信元は <? PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
+            なお、メールの送信元は <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
         </p>
         <div class="testMail-div">
             <button type="button" id="testMail">テストメールを送信</button>
