@@ -37,7 +37,9 @@ function doGet(e) {
 
     template.activeUserEmail = accountEmail;
 
-    return template.evaluate();
+    const htmlOutput = template.evaluate();
+    htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return htmlOutput;
 }
 
 // スプレッドシートにemail,timeを保存
@@ -115,7 +117,9 @@ function sendReminder(accountEmail, email) {
         // そもそものGoogle認証も、テストメールに含ませた方が理想的？
     }
 
-    const html = template.evaluate().getContent();
+    const htmlOutput = template.evaluate();
+    htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    const html = htmlOutput.getContent();
 
     // メール送信
     MailApp.sendEmail(recipient, subject, html, { htmlBody: html });
