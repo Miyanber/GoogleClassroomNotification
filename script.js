@@ -1,5 +1,5 @@
 const now = new Date();
-now.setDate(now.getDate() - 10);
+now.setDate(now.getDate());
 const tomorrow = new Date();
 tomorrow.setDate(now.getDate() + 1);
 
