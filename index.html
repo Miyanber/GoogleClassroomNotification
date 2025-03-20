@@ -281,7 +281,7 @@
 
         function resetOAuth() {
             google.script.run.withSuccessHandler(result => {
-                alert('このシステムから権限を削除しました。メールを受信したい場合、再度設定を行ってください。');
+                alert('このシステムから権限を削除しました。ページをリロードして下さい。メールを受信したい場合は、再度設定を行ってください。');
                 submitButton.disabled = false;
             }).resetOAuth();
         }

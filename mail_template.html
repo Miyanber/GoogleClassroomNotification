@@ -15,7 +15,7 @@
             margin: 0;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 800px;
             margin: 0 auto;
@@ -24,77 +24,78 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        
+
         a {
             color: #007BFF;
             text-decoration: none;
             font-weight: bold;
         }
-        
+
         a:hover {
             text-decoration: underline;
         }
-        
+
         h2 {
             color: #333;
             border-bottom: 2px solid #007BFF;
             padding-bottom: 5px;
         }
-        
+
         .course {
             margin: 2em 0;
         }
-        
+
         .course h3 {
             border-left: solid 5px #007BFF;
             padding-left: .5em;
         }
-        
+
         .post {
             padding: 1em;
             border: 1px solid #cecece;
             border-radius: .5em;
             margin-bottom: 1em;
         }
-        
+
         .post .userIcon,
         .post .materialIcon {
             background-color: #007BFF;
             width: 2.5em;
             height: 2.5em;
             border-radius: 50%;
+            filter: invert(0) !important;
         }
-        
+
         .post .materialIcon {
             width: 1.7em;
             height: 1.7em;
             padding: .4em;
         }
-        
+
         .post .teacher,
         .post .header {
             display: flex;
             line-height: 2.5em;
             column-gap: .5em;
         }
-        
+
         .post .content {
             margin: 0;
             margin-top: 1em;
         }
-        
+
         .post .alternateLink {
             margin: 0;
             text-align: right;
         }
-        
+
         .files {
             list-style-type: none;
             padding: 0;
             display: block;
             margin: .5em 0;
         }
-        
+
         .files li {
             margin: 0 .5em .5em 0;
             padding: .5em 1em;
@@ -103,14 +104,14 @@
             font-size: .9em;
             display: inline-block;
         }
-        
+
         .files li a {
             display: flex;
             color: #007BFF;
             text-decoration: none;
             font-weight: bold;
         }
-        
+
         .task {
             background: #e9f5ff;
             padding: 10px;
@@ -118,12 +119,11 @@
             margin-bottom: 10px;
             border-radius: 5px;
         }
-        
+
         .note {
             font-size: 14px;
             color: #777;
         }
-        
     </style>
 </head>
 
@@ -141,26 +141,22 @@
                 <? if (post.type == "ANNOUNCEMENTS") { ?>
                 <div class="post announcement">
                     <div class="teacher">
-                        <img class="userIcon" src="<?= getPhotoUrl(accessToken, post.creatorUserId) ?>" alt="assignment">
+                        <?!= post.creatorUserPhotoTemplate ?>
                         <span class="teacherName">
-                            <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?>
+                            <?= post.creatorUserName ?>
                         </span>
                     </div>
+
                     <? if (post.text != null) { ?>
-                        <p class="content">
-                            <?!= toBrTag(post.text) ?>
-                        </p>
+                    <p class="content">
+                        <?!= toBrTag(post.text) ?>
+                    </p>
                     <? } ?>
-                    
+
                     <? if (post.materials != null && post.materials.length > 0) { ?>
                     <ul class="files">
                         <? for(const material of post.materials) { ?>
-                        <li>
-                            <? const file = material.driveFile.driveFile ?>
-                            <a href="<?= file.alternateLink ?>">
-                                <?= file.title ?>
-                            </a>
-                        </li>
+                        <?!= getMaterialTemplate(material) ?>
                         <? } ?>
                     </ul>
                     <? } ?>
@@ -172,28 +168,27 @@
                 <? } else if (post.type == "WORKS") { ?>
                 <div class="post works">
                     <div class="header">
-                        <img class="materialIcon" src="https://classroom-notification.s3.ap-northeast-1.amazonaws.com/assignment_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24+(1).png" alt="assignment">
+                        <img class="materialIcon"
+                            src="https://classroom-notification.s3.ap-northeast-1.amazonaws.com/assignment_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24+(1).png"
+                            alt="assignment">
                         <span class="title">
-                            <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?> 先生からの課題 : <?= post.title ?>
+                            <?= post.creatorUserName ?> 先生からの課題 :
+                            <?= post.title ?>
                         </span>
                     </div>
+
                     <? if (post.description != null) { ?>
                     <p class="content">
                         <?!= toBrTag(post.description) ?>
                     </p>
                     <? } ?>
-                    
+
                     <? if (post.materials != null && post.materials.length > 0) { ?>
-                        <ul class="files">
-                            <? for(const material of post.materials) { ?>
-                            <li>
-                                <? const file = material.driveFile.driveFile ?>
-                                <a href="<?= file.alternateLink ?>">
-                                    <?= file.title ?>
-                                </a>
-                            </li>
-                            <? } ?>
-                        </ul>
+                    <ul class="files">
+                        <? for(const material of post.materials) { ?>
+                        <?!= getMaterialTemplate(material) ?>
+                        <? } ?>
+                    </ul>
                     <? } ?>
 
                     <p class="alternateLink">
@@ -203,28 +198,27 @@
                 <? } else { ?>
                 <div class="post workMaterials">
                     <div class="header">
-                        <img class="materialIcon" src="https://classroom-notification.s3.ap-northeast-1.amazonaws.com/book_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24+(1).png" alt="book">
+                        <img class="materialIcon"
+                            src="https://classroom-notification.s3.ap-northeast-1.amazonaws.com/book_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24+(1).png"
+                            alt="book">
                         <span class="title">
-                            <?= Classroom.UserProfiles.get(post.creatorUserId).name.fullName ?> 先生からの資料 : <?= post.title ?>
+                            <?= post.creatorUserName ?> 先生からの資料 :
+                            <?= post.title ?>
                         </span>
                     </div>
+
                     <? if (post.description != null) { ?>
-                        <p class="content">
-                            <?!= toBrTag(post.description) ?>
-                        </p>
+                    <p class="content">
+                        <?!= toBrTag(post.description) ?>
+                    </p>
                     <? } ?>
-                    
+
                     <? if (post.materials != null && post.materials.length > 0) { ?>
-                        <ul class="files">
-                            <? for(const material of post.materials) { ?>
-                            <li>
-                                <? const file = material.driveFile.driveFile ?>
-                                <a href="<?= file.alternateLink ?>">
-                                    <?= file.title ?>
-                                </a>
-                            </li>
-                            <? } ?>
-                        </ul>
+                    <ul class="files">
+                        <? for(const material of post.materials) { ?>
+                        <?!= getMaterialTemplate(material) ?>
+                        <? } ?>
+                    </ul>
                     <? } ?>
 
                     <p class="alternateLink">
