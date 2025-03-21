@@ -145,6 +145,8 @@ function doGet(e) {
 
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    htmlOutput.setTitle('Google Classroom™ メール通知送信システム');
+    htmlOutput.setFaviconUrl('https://drive.google.com/uc?id=1YhNuGieqF_rUP02Tdo95uaB8w3pG_USf&.png');
     return htmlOutput;
 }
 
