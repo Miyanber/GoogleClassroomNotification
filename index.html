@@ -55,7 +55,7 @@
             margin-bottom: 3em;
 
             h2 {
-                border-left: #aaa solid .3em;
+                border-left: #4D9BC1 solid .3em;
                 border-bottom: #aaa solid .1em;
                 padding-left: .4em;
             }
@@ -64,7 +64,7 @@
         #form {
             background: #fff;
             padding: 1em;
-            margin: 0 auto;
+            margin: 1rem auto;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
@@ -74,7 +74,7 @@
 
         label {
             display: block;
-            margin-top: 10px;
+            margin: 10px 0 5px;
             font-weight: bold;
         }
 
@@ -82,7 +82,6 @@
             width: 30em;
             max-width: 100%;
             padding: 8px;
-            margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 16px;
@@ -92,7 +91,7 @@
             display: block;
             margin: 0 auto;
             margin-top: 15px;
-            background-color: #28a745;
+            background-color: #4D9BC1;
             color: white;
             border: none;
             padding: 10px;
@@ -110,6 +109,16 @@
         button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
+        }
+
+        .email-div {
+            background-color: #ffcdcd;
+            border-radius: 0 0 8px 8px;
+
+            &:has(.verified) {
+                background-color: #80f575;
+                margin-bottom: 1em;
+            }
         }
 
         .testMail-div {
@@ -131,6 +140,65 @@
             font-size: 0.8em;
             text-align: center;
         }
+
+        .flow_design05 {
+            width: 100%;
+        }
+
+        .flow05 {
+            padding-left: 0;
+        }
+
+        .flow05>li {
+            list-style-type: none;
+            position: relative;
+            padding-left: 50px;
+            opacity: 0.5;
+        }
+
+        .flow05>li:not(:last-child) {
+            padding-bottom: 2rem;
+        }
+
+        .flow05>li .icon05 {
+            width: 2em;
+            height: 2em;
+            line-height: 2em;
+            text-align: center;
+            border-radius: 100vh;
+            display: inline-block;
+            background: #4D9BC1;
+            color: #fff;
+            position: absolute;
+            left: 0;
+        }
+
+        .flow05>li:not(:last-child)::before {
+            content: '';
+            background: #c3c3c3;
+            width: 4px;
+            height: 100%;
+            position: absolute;
+            top: calc(50%);
+            left: 19px;
+            -ms-transform: translateY(-50%);
+            -webkit-transform: translateY(-50%);
+            transform: translateY(-50%);
+        }
+
+        .flow05>li dl dt {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #4D9BC1;
+        }
+
+        .flow05>li dl dd {
+            margin-left: 0;
+        }
+
+        .flow05>li.activeFlow {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -151,28 +219,81 @@
                 現在ログイン中のアカウントが所属する Google Classroom クラスで、過去24時間以内に更新されたお知らせや課題・資料について、毎日指定した時刻にメール通知を受け取ることができます。
             </p>
         </div>
-    
+
         <div class="section">
-            <h2>設定</h2>
+            <h2>利用方法</h2>
+            <div class="flow_design05">
+                <ul class="flow05">
+                    <li id="step1" class="<? if (doneStep === 1) { ?>activeFlow<? } ?>">
+                        <dl>
+                            <dt><span class="icon05">1</span>通知時刻・受信用メールアドレスの設定</dt>
+                            <dd>以下のフォームより、通知時刻と受信用メールアドレスを送信して下さい。</dd>
+                        </dl>
+                        <form id="form" action="" method="post">
+                            <label for="time">通知時刻</label>
+                            <input type="time" name="time" id="time" value="<?= time ?>" required>
+                            <label for="email">メールアドレス</label>
+                            <div class="email-div">
+                                <input type="email" name="email" id="email" placeholder="注意：rakunan-h.ed.jpは利用できません."
+                                    value="<?= receiverEmail ?>" required>
+                                <div id="emailStatus" class="emailStatus <? if (isVerified) { ?>verified<? } ?>">
+                                    <? if (isVerified) { ?>認証済み
+                                    <? } else { ?>未認証
+                                    <? } ?>
+                                </div>
+                            </div>
+                            <button type="submit" id="submit">設定</button>
+                        </form>
+                    </li>
+
+                    <li id="step2" class="<? if (doneStep === 2) { ?>activeFlow<? } ?>">
+                        <dl>
+                            <dt><span class="icon05">2</span>メールアドレスの確認</dt>
+                            <dd>
+                                受信用メールアドレスに、<?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> より確認メールを送信致しました。確認メールに記載されている認証用URLにアクセスして、認証を完了して下さい。 
+                            </dd>
+                        </dl>
+                        <p>
+                            確認メールが届かない場合は、以下の原因が考えられます。
+                            <ul>
+                                <li>迷惑メールフォルダに入っている</li>
+                                <li>メールアドレスが正しく入力されていない</li>
+                                <li>確認メールの送信元 (<?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?>) が受信拒否設定されている</li>
+                            </ul>
+                        </p>
+                    </li>
+
+                    <li id="step3" class="<? if (doneStep === 3) { ?>activeFlow<? } ?>">
+                        <dl>
+                            <dt><span class="icon05">3</span>Google Classroom へのアクセス権限の付与</dt>
+                            <dd>
+                                このシステムでは、ログイン中の Google アカウントが所属する Google Classroom クラスのお知らせや課題・資料にアクセスする権限を必要とします。以下のリンクから認証を完了して下さい。<br>
+                            </dd>
+                        </dl>
+                    </li>
+                </ul>
+            </div>
             <p>
                 メール通知を受け取りたい時間とメールアドレスを入力して下さい。
             </p>
             <ul>
-                <li><strong>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信できないため利用できません。</strong></li>
-                <li>システムの都合上、メールの送信は指定した時刻から±5分程度程度ずれる場合があります。</li>
-                <li>設定はログイン中の Google アカウント（<?= activeUserEmail ?>）に保存されます。</li>
-                <li>メールの送信元は <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。</li>
+                <li><strong>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）は、メールを受信できないため利用できません。</strong></li>
+                <li><strong>初回設定時はメールアドレスの確認とGoogle認証が必要です。指定したメールアドレスに送信された確認メールに含まれている認証用URLをクリックし、メールの認証を完了してください。</strong>
+                </li>
+                <li><strong>メールアドレス設定時はメールアドレスの確認が必要です。指定したメールアドレスに送信された確認メールに含まれている認証用URLをクリックし、メールの認証を完了してください。</strong>
+                </li>
             </ul>
-            <form id="form" action="" method="post">
-                <label for="time">通知時間</label>
-                <input type="time" name="time" id="time" value="<?= time ?>" required>
-                <label for="email">メールアドレス</label>
-                <input type="email" name="email" id="email" placeholder="注意：rakunan-h.ed.jpは利用できません." value="<?= receiverEmail ?>" required>
-                <div id="emailStatus" class="emailStatus <? if (isVerified) { ?>verified<? } ?>"><? if (isVerified) { ?>認証済み<? } else { ?>未認証<? } ?></div>
-                <button type="submit" id="submit">設定</button>
-            </form>
+            <ul>
+                <li>システムの都合上、メールの送信は指定した時刻から±5分程度程度ずれる場合があります。</li>
+                <li>設定はログイン中の Google アカウント（
+                    <?= activeUserEmail ?>）に保存されます。
+                </li>
+                <li>メールの送信元は
+                    <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
+                </li>
+            </ul>
         </div>
-    
+
         <div class="section">
             <h2>テストメールを送信</h2>
             <p>
@@ -180,22 +301,23 @@
             </p>
             <p>
                 ※メールが送信されない場合は、以下の原因が考えられます。
-                <ul>
-                    <li>テストメールが迷惑メールと判断されている</li>
-                    <li>メールアドレスが正しく入力されていない</li>
-                    <li>メールアドレスが受信拒否設定されている</li>
-                </ul>
-                特に、迷惑メールと判断されている可能性が高いです。利用しているメールアプリの迷惑メールボックスにテストメールが入っていないか確認して下さい。
-                なお、メールの送信元は <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
+            <ul>
+                <li>テストメールが迷惑メールと判断されている</li>
+                <li>メールアドレスが正しく入力されていない</li>
+                <li>メールアドレスが受信拒否設定されている</li>
+            </ul>
+            特に、迷惑メールと判断されている可能性が高いです。利用しているメールアプリの迷惑メールボックスにテストメールが入っていないか確認して下さい。
+            なお、メールの送信元は
+            <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
             </p>
             <div class="testMail-div">
                 <button type="button" id="testMail">テストメールを送信</button>
             </div>
-    
+
         </div>
-    
+
         <div class="section">
-            <h2>プライバシーポリシー</h2>
+            <h2 id="privacyPolicy">プライバシーポリシー</h2>
             <p>
                 このシステムでは、ログイン中の Google アカウントが所属する Google Classroom クラスのお知らせや課題・資料にアクセスする権限を必要とします。
                 許可した権限は、「その他」→「このシステムから権限を削除」で許可を取り消すことができます。
@@ -204,7 +326,7 @@
                 <br>令和7年3月17日更新
             </p>
         </div>
-    
+
         <div class="section">
             <h2>その他</h2>
             <ul>
@@ -286,7 +408,7 @@
             }
             google.script.run.withSuccessHandler(result => {
                 if (result != null) {
-                    alert('通知時間・メールアドレスが設定できました。次に Google Classroomにアクセスする権限が必要です。次に表示される画面で権限を許可してください。');
+                    alert('通知時間・メールアドレスが設定できました。次に Google Classroom にアクセスする権限が必要です。次に表示される画面で権限を許可してください。');
                     submitButton.disabled = false;
                     window.open(result);
                 } else {

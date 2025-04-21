@@ -190,10 +190,8 @@ function doGet(e) {
         const email = e.parameter.email;
         const token = e.parameter.token;
         const result = verifyEmail(email, token);
-        if (result) {
-            return HtmlService.createHtmlOutput("メールアドレスの確認が完了しました。このウィンドウを閉じてください。");
-        } else {
-            return HtmlService.createHtmlOutput("メールアドレスの確認に失敗しました。再度お試しください。");
+        if (!result) {
+            return HtmlService.createHtmlOutput("メールアドレスの確認に失敗しました。設定画面に戻り、再度お試しください。");
         }
     }
 
@@ -203,7 +201,15 @@ function doGet(e) {
 
     const service = getOAuthService(accountEmail);
     const userSetting = getActiveUserSetting();
+
+    let doneStep = 0; // 0: 未認証, 1: 設定入力完了, 2: メーアドレス確認完了, 3: OAuth認証完了
+
+    if (userSetting) {
+        doneStep = userSetting.isVerified ? 2 : 1;
+    }
+
     if (service.hasAccess() && userSetting) {
+        doneStep = 3;
         const timeDate = new Date(userSetting.time);
         template.receiverEmail = userSetting.receiverEmail;
         template.time = `${zeroPadding(timeDate.getHours())}:${zeroPadding(timeDate.getMinutes())}`;
@@ -215,6 +221,8 @@ function doGet(e) {
         template.isVerified = false;
         Logger.log(`ログイン中のユーザー設定 : 未設定`);
     }
+
+    template.doneStep = doneStep;
 
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
