@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body {
+        font-family: sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      a {
+        color: #1a73e8;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      このたびはご登録いただき、誠にありがとうございます。<br>
+      以下のリンクをクリックして、アカウントの認証を完了してください：
+    </p>
+
+    <p>
+      ▼認証用URL<br>
+      <a href="<?= verificationUrl ?>"><?= verificationUrl ?></a>
+    </p>
+
+    <p>
+      <strong>注意：「現在、ファイルを開くことができません。」と表示される場合、ログインしているGoogleアカウントが学校のGoogleアカウント(rakunan-h.ed.jp)のものであるか確認して下さい。</strong><br>
+      ※このリンクの有効期限は <?= expirationTime ?> までです。<br>
+      期限を過ぎた場合は、再度登録手続きをお願いいたします。
+    </p>
+
+    <p>
+      本メールに心当たりがない場合は、このまま破棄してください。
+    </p>
+
+    <p>
+      今後ともどうぞよろしくお願いいたします。
+    </p>
+
+    <hr>
+    <p>
+      @ 2025 Miyanber<br>
+      Classroom Summary Notification <br>
+      お問い合わせ: <a href="https://script.google.com/a/macros/rakunan-h.ed.jp/s/AKfycbx0pc3QWXrk0mIugfXJAzQAFq9PR5UpKjj63xefKIo/exec">Google Classroom™メール通知送信システム</a>
+    </p>
+  </body>
+</html>

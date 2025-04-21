@@ -3,6 +3,8 @@ now.setDate(now.getDate());
 const tomorrow = new Date();
 tomorrow.setDate(now.getDate() + 1);
 
+const USERS_SHEET = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI').getSheetByName('Sheet1');
+
 const USE_CACHE = PropertiesService.getScriptProperties().getProperty('USE_CACHE') === 'True';
 
 /**
@@ -34,7 +36,7 @@ function fetchWrapper(accessToken, url) {
  * @returns {boolean} - 送信成功なら true, 失敗なら false
  */
 function testMail() {
-    const values = getUserSettings();
+    const values = getActiveUserSetting();
     if (!values) return false;
 
     try {
@@ -48,36 +50,94 @@ function testMail() {
     }
 }
 
+function sendVerificationMail(receiverEmail, token, expirationTime) {
+    const subject = "【Classroom Summary Notification】メールアドレス確認";
+    const template = HtmlService.createTemplateFromFile('verification_template');
+    template.verificationUrl = `${getAppUrl()}?email=${receiverEmail}&token=${token}`;
+    template.expirationTime = expirationTime;
+    const htmlOutput = template.evaluate();
+    htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    
+    MailApp.sendEmail({
+        to: receiverEmail,
+        subject: subject,
+        htmlBody: htmlOutput.getContent()
+    });
+}
+
+/**
+ * メールアドレス確認用のトークンを検証する関数
+ *
+ * @param {string} email
+ * @param {string} token
+ * @return {string} - トークンが正しければ "OK" を返す。トークンが無効な場合はエラー内容を返す。
+ */
+function verifyEmail(email, token) {
+    const userSetting = getActiveUserSetting();
+    if (!userSetting || userSetting.receiverEmail !== email || userSetting.token !== token) return false;
+    const expiredTime = new Date(userSetting.expiredTime);
+    if (now.getTime() > expiredTime.getTime()) return false;
+    USERS_SHEET.getRange(userSetting.id + 1, 5, 1, 3).setValues([[true, "", ""]]);
+    return true;
+}
+
+function getAllUserSettings() {
+    const data = USERS_SHEET.getRange(2, 1, USERS_SHEET.getLastRow() - 1, USERS_SHEET.getLastColumn()).getValues();
+    return data.map(row => ({
+        id: row[0],
+        accountEmail: row[1],
+        receiverEmail: row[2],
+        time: row[3],
+        isVerified: row[4],
+        token: row[5]
+    }));
+}
+
 /**
  * スプレッドシートからユーザー設定を取得
- * @returns {string[] | null} - [accountEmail, receiverEmail, time] の配列
+ * @returns {object | null} - ユーザー設定オブジェクト、または null
  */
-function getUserSettings() {
-    const sheet = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI').getSheetByName('Sheet1');
+function getActiveUserSetting() {
     const accountEmail = Session.getActiveUser().getEmail();
-
-    return sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn())
-        .getValues()
-        .find(row => row[0] === accountEmail) || null;
+    return getAllUserSettings()
+        .find(user => user.accountEmail === accountEmail) || null;
 }
 
 /**
  * スプレッドシートにユーザー設定を保存
  */
-function setUserSettings(email, time) {
-    const sheet = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI').getSheetByName('Sheet1');
+function createOrUpdateUser(receiverEmail, time) {
+    const userSetting = getActiveUserSetting();
+
+    const expiredTime = new Date();
+    expiredTime.setMinutes(expiredTime.getMinutes() + 10);
+    const token = Utilities.getUuid();
     const accountEmail = Session.getActiveUser().getEmail();
+    let shouldSendMail = false;
 
-    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-    const rowIndex = data.findIndex(row => row[0] === accountEmail);
-
-    if (rowIndex >= 0) {
-        sheet.getRange(rowIndex + 2, 1, 1, 3).setValues([[accountEmail, email, time]]);
+    if (userSetting) {
+        const emailChanged = userSetting.receiverEmail !== receiverEmail;
+        if (emailChanged || userSetting.isVerified === false) {
+            USERS_SHEET.getRange(userSetting.id + 1, 3, 1, 5).setValues([[receiverEmail, time, false, token, expiredTime]]);
+            shouldSendMail = true;
+        } else {
+            USERS_SHEET.getRange(userSetting.id + 1, 3, 1, 3).setValues([[receiverEmail, time, true]]);
+        }
     } else {
-        sheet.appendRow([accountEmail, email, time]);
+        USERS_SHEET.appendRow([USERS_SHEET.getLastRow() - 1, accountEmail, receiverEmail, time, false, token, expiredTime]);
+        shouldSendMail = true;
     }
 
-    Logger.log(`[User Settings Saved] { accountEmail: ${accountEmail}, receiverEmail: ${email}, time: ${time} }`);
+    if (shouldSendMail) {
+        try {
+            sendVerificationMail(receiverEmail, token, expiredTime);
+        } catch (e) {
+            // TODO: 送信失敗時の処理
+            Logger.log(`[Error] メール送信失敗: ${e.message}`);
+        }
+    }
+
+    Logger.log(`[User Settings Saved] { userId: ${USERS_SHEET.getLastRow() - 1}, accountEmail: ${accountEmail}, receiverEmail: ${receiverEmail}, time: ${time} }`);
 }
 
 /**
@@ -126,20 +186,33 @@ function getAppUrl() {
  * GETリクエスト用関数
  */
 function doGet(e) {
-    let template = HtmlService.createTemplateFromFile("index");
+    if (e.parameter.email && e.parameter.token) {
+        const email = e.parameter.email;
+        const token = e.parameter.token;
+        const result = verifyEmail(email, token);
+        if (result) {
+            return HtmlService.createHtmlOutput("メールアドレスの確認が完了しました。このウィンドウを閉じてください。");
+        } else {
+            return HtmlService.createHtmlOutput("メールアドレスの確認に失敗しました。再度お試しください。");
+        }
+    }
+
+    const template = HtmlService.createTemplateFromFile("index");
     const accountEmail = Session.getActiveUser().getEmail();
     template.activeUserEmail = accountEmail;
 
     const service = getOAuthService(accountEmail);
-    const settings = getUserSettings();
-    if (service.hasAccess() && settings) {
-        const timeDate = new Date(settings[2]);
-        template.email = settings[1];
+    const userSetting = getActiveUserSetting();
+    if (service.hasAccess() && userSetting) {
+        const timeDate = new Date(userSetting.time);
+        template.receiverEmail = userSetting.receiverEmail;
         template.time = `${zeroPadding(timeDate.getHours())}:${zeroPadding(timeDate.getMinutes())}`;
-        Logger.log(`ログイン中のユーザー設定 : { Email: ${template.email}, Time: ${template.time} }`);
+        template.isVerified = userSetting.isVerified;
+        Logger.log(`ログイン中のユーザー設定 : { Email: ${template.receiverEmail}, Time: ${template.time}, isVerified: ${template.isVerified} }`);
     } else {
-        template.email = "";
+        template.receiverEmail = "";
         template.time = "";
+        template.isVerified = false;
         Logger.log(`ログイン中のユーザー設定 : 未設定`);
     }
 
@@ -151,13 +224,13 @@ function doGet(e) {
 }
 
 /**
- * スプレッドシートにemail,timeを保存する。
+ * スプレッドシートにemail,timeを保存する。テンプレート上から呼び出す。
  * @returns {string | null} - OAuth認証済みならnull, 未認証であれば認証URLを返す
  */
-function saveUser(time, email) {
+function saveUnverifiedUser(time, email) {
+    createOrUpdateUser(email, time);
     const accountEmail = Session.getActiveUser().getEmail();
-    setUserSettings(email, time);
-    Logger.log(`saved user: { accountEmail: ${accountEmail}, receiverEmail: ${email}, time: ${time} }`);
+    Logger.log(`saved unverified user: { accountEmail: ${accountEmail}, receiverEmail: ${email}, time: ${time} }`);
     const service = getOAuthService(accountEmail);
     if (service.hasAccess()) {
         Logger.log('[OAuth] already authorized');
@@ -172,9 +245,7 @@ function saveUser(time, email) {
  * 現在時刻と指定時刻が一致していれば、メール通知を送信する関数
  */
 function triggerEveryMinute() {
-    const spreadsheet = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI');
-    const sheet = spreadsheet.getSheetByName('Sheet1');
-    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+    const data = USERS_SHEET.getRange(2, 1, USERS_SHEET.getLastRow() - 1, USERS_SHEET.getLastColumn()).getValues();
 
     data.forEach(row => {
         const accountEmail = row[0];

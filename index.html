@@ -167,7 +167,8 @@
                 <label for="time">通知時間</label>
                 <input type="time" name="time" id="time" value="<?= time ?>" required>
                 <label for="email">メールアドレス</label>
-                <input type="email" name="email" id="email" placeholder="example@example.com" value="<?= email ?>" required>
+                <input type="email" name="email" id="email" placeholder="注意：rakunan-h.ed.jpは利用できません." value="<?= receiverEmail ?>" required>
+                <div id="emailStatus" class="emailStatus <? if (isVerified) { ?>verified<? } ?>"><? if (isVerified) { ?>認証済み<? } else { ?>未認証<? } ?></div>
                 <button type="submit" id="submit">設定</button>
             </form>
         </div>
@@ -248,6 +249,25 @@
             }).testMail();
         });
 
+        const emailInput = document.getElementById('email');
+        const emailStatus = document.getElementById('emailStatus');
+        const currentEmail = emailInput.value;
+        const isVerified = emailStatus.classList.contains('verified');
+        function updateEmailStatus() {
+            const email = emailInput.value;
+            if (currentEmail && email === currentEmail && isVerified) {
+                emailStatus.textContent = '認証済み';
+                emailStatus.classList.add('verified');
+            } else if (email.includes("rakunan-h.ed.jp")) {
+                emailStatus.textContent = '利用不可';
+                emailStatus.classList.remove('verified');
+            } else {
+                emailStatus.textContent = '未認証';
+                emailStatus.classList.remove('verified');
+            }
+        }
+        updateEmailStatus();
+        emailInput.addEventListener('input', () => updateEmailStatus());
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -273,7 +293,7 @@
                     submitButton.disabled = false;
                     alert('設定が完了しました。メールアドレスを設定・変更した場合は、一度テストメールを送信し、正しくメールを受け取れるかチェックすることをお勧めします。');
                 }
-            }).saveUser(time, email);
+            }).saveUnverifiedUser(time, email);
 
             console.log('submit');
         });
