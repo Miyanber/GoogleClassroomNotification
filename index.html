@@ -141,63 +141,34 @@
             text-align: center;
         }
 
-        .flow_design05 {
-            width: 100%;
+        .sampleImage {
+            width: 20em;
+            margin: 1em;
         }
 
-        .flow05 {
-            padding-left: 0;
+        .intro {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: row;
         }
 
-        .flow05>li {
-            list-style-type: none;
-            position: relative;
-            padding-left: 50px;
-            opacity: 0.5;
-        }
-
-        .flow05>li:not(:last-child) {
-            padding-bottom: 2rem;
-        }
-
-        .flow05>li .icon05 {
-            width: 2em;
-            height: 2em;
-            line-height: 2em;
+        .intro-text {
+            margin-left: 1em;
+            font-size: 1.2em;
             text-align: center;
-            border-radius: 100vh;
-            display: inline-block;
-            background: #4D9BC1;
-            color: #fff;
-            position: absolute;
-            left: 0;
         }
 
-        .flow05>li:not(:last-child)::before {
-            content: '';
-            background: #c3c3c3;
-            width: 4px;
-            height: 100%;
-            position: absolute;
-            top: calc(50%);
-            left: 19px;
-            -ms-transform: translateY(-50%);
-            -webkit-transform: translateY(-50%);
-            transform: translateY(-50%);
-        }
+        @media (max-width: 700px) {
+            .intro {
+                flex-direction: column;
+                align-items: center;
+            }
 
-        .flow05>li dl dt {
-            font-size: 1.3em;
-            font-weight: 600;
-            color: #4D9BC1;
-        }
-
-        .flow05>li dl dd {
-            margin-left: 0;
-        }
-
-        .flow05>li.activeFlow {
-            opacity: 1;
+            .intro-text {
+                margin-left: 0;
+                text-align: center;
+            }
         }
     </style>
 </head>
@@ -215,83 +186,18 @@
     <div class="container">
         <div class="section">
             <h2>サービス内容</h2>
-            <p>
-                現在ログイン中のアカウントが所属する Google Classroom クラスで、過去24時間以内に更新されたお知らせや課題・資料について、毎日指定した時刻にメール通知を受け取ることができます。
-            </p>
+            <div class="intro">
+                <img class="sampleImage" src="https://lh3.google.com/u/0/d/19TyDDnw8aC-_4imNXuy3rICiePrhbpNX">
+                <div class="intro-text">
+                    過去24時間以内に更新された Google Classroom クラスのお知らせや課題・資料を、毎日メール通知致します。<br><br>
+                    複数クラスの更新内容をまとめて閲覧できます。
+                </div>
+            </div>
         </div>
 
         <div class="section">
-            <h2>利用方法</h2>
-            <div class="flow_design05">
-                <ul class="flow05">
-                    <li id="step1" class="<? if (doneStep === 1) { ?>activeFlow<? } ?>">
-                        <dl>
-                            <dt><span class="icon05">1</span>通知時刻・受信用メールアドレスの設定</dt>
-                            <dd>以下のフォームより、通知時刻と受信用メールアドレスを送信して下さい。</dd>
-                        </dl>
-                        <form id="form" action="" method="post">
-                            <label for="time">通知時刻</label>
-                            <input type="time" name="time" id="time" value="<?= time ?>" required>
-                            <label for="email">メールアドレス</label>
-                            <div class="email-div">
-                                <input type="email" name="email" id="email" placeholder="注意：rakunan-h.ed.jpは利用できません."
-                                    value="<?= receiverEmail ?>" required>
-                                <div id="emailStatus" class="emailStatus <? if (isVerified) { ?>verified<? } ?>">
-                                    <? if (isVerified) { ?>認証済み
-                                    <? } else { ?>未認証
-                                    <? } ?>
-                                </div>
-                            </div>
-                            <button type="submit" id="submit">設定</button>
-                        </form>
-                    </li>
-
-                    <li id="step2" class="<? if (doneStep === 2) { ?>activeFlow<? } ?>">
-                        <dl>
-                            <dt><span class="icon05">2</span>メールアドレスの確認</dt>
-                            <dd>
-                                受信用メールアドレスに、<?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> より確認メールを送信致しました。確認メールに記載されている認証用URLにアクセスして、認証を完了して下さい。 
-                            </dd>
-                        </dl>
-                        <p>
-                            確認メールが届かない場合は、以下の原因が考えられます。
-                            <ul>
-                                <li>迷惑メールフォルダに入っている</li>
-                                <li>メールアドレスが正しく入力されていない</li>
-                                <li>確認メールの送信元 (<?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?>) が受信拒否設定されている</li>
-                            </ul>
-                        </p>
-                    </li>
-
-                    <li id="step3" class="<? if (doneStep === 3) { ?>activeFlow<? } ?>">
-                        <dl>
-                            <dt><span class="icon05">3</span>Google Classroom へのアクセス権限の付与</dt>
-                            <dd>
-                                このシステムでは、ログイン中の Google アカウントが所属する Google Classroom クラスのお知らせや課題・資料にアクセスする権限を必要とします。以下のリンクから認証を完了して下さい。<br>
-                            </dd>
-                        </dl>
-                    </li>
-                </ul>
-            </div>
-            <p>
-                メール通知を受け取りたい時間とメールアドレスを入力して下さい。
-            </p>
-            <ul>
-                <li><strong>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）は、メールを受信できないため利用できません。</strong></li>
-                <li><strong>初回設定時はメールアドレスの確認とGoogle認証が必要です。指定したメールアドレスに送信された確認メールに含まれている認証用URLをクリックし、メールの認証を完了してください。</strong>
-                </li>
-                <li><strong>メールアドレス設定時はメールアドレスの確認が必要です。指定したメールアドレスに送信された確認メールに含まれている認証用URLをクリックし、メールの認証を完了してください。</strong>
-                </li>
-            </ul>
-            <ul>
-                <li>システムの都合上、メールの送信は指定した時刻から±5分程度程度ずれる場合があります。</li>
-                <li>設定はログイン中の Google アカウント（
-                    <?= activeUserEmail ?>）に保存されます。
-                </li>
-                <li>メールの送信元は
-                    <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
-                </li>
-            </ul>
+            <h2>利用登録</h2>
+            
         </div>
 
         <div class="section">
