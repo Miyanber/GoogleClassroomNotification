@@ -253,13 +253,13 @@ function saveUnverifiedUser(time, email) {
  * 現在時刻と指定時刻が一致していれば、メール通知を送信する関数
  */
 function triggerEveryMinute() {
-    const data = USERS_SHEET.getRange(2, 1, USERS_SHEET.getLastRow() - 1, USERS_SHEET.getLastColumn()).getValues();
+    const allUserSettings = getAllUserSettings();
 
-    data.forEach(row => {
-        const accountEmail = row[0];
-        const email = row[1];
-        const rowTime = new Date(row[2]);
-        const time = new Date(now.getFullYear(), now.getMonth(), now.getDate(), rowTime.getHours(), rowTime.getMinutes());
+    allUserSettings.forEach(setting => {
+        const accountEmail = setting.accountEmail;
+        const email = setting.receiverEmail;
+        const rawTime = new Date(setting.time);
+        const time = new Date(now.getFullYear(), now.getMonth(), now.getDate(), rawTime.getHours(), rawTime.getMinutes());
 
         if (now.getHours() == time.getHours() && now.getMinutes() == time.getMinutes()) {
             sendReminder(accountEmail, email);
