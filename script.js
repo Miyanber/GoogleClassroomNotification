@@ -57,7 +57,7 @@ function sendVerificationMail(receiverEmail, token, expirationTime) {
     template.expirationTime = expirationTime;
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
-    
+
     MailApp.sendEmail({
         to: receiverEmail,
         subject: subject,
@@ -195,21 +195,31 @@ function doGet(e) {
         }
     }
 
-    const template = HtmlService.createTemplateFromFile("index");
-    const accountEmail = Session.getActiveUser().getEmail();
-    template.activeUserEmail = accountEmail;
+    let template = null;
 
+    const accountEmail = Session.getActiveUser().getEmail();
     const service = getOAuthService(accountEmail);
     const userSetting = getActiveUserSetting();
 
-    let doneStep = 0; // 0: 未認証, 1: 設定入力完了, 2: メーアドレス確認完了, 3: OAuth認証完了
+    let nextStep = 1; // 1: 設定入力, 2: メールアドレス確認, 3: OAuth認証, (4: GoogleClassroom権限確認,) 5: 全て完了済み
 
     if (userSetting) {
-        doneStep = userSetting.isVerified ? 2 : 1;
+        nextStep = userSetting.isVerified ? 3 : 2;
+        if (service.hasAccess()) {
+            nextStep = 5;
+        }
     }
 
-    if (service.hasAccess() && userSetting) {
-        doneStep = 3;
+    if ((nextStep == 1 && e.parameter.step == 1) || nextStep == 2 || nextStep == 3 || nextStep == 4) {
+        template = HtmlService.createTemplateFromFile("registration");
+    } else {
+        template = HtmlService.createTemplateFromFile("index");
+    }
+
+    template.step = nextStep;
+    template.activeUserEmail = accountEmail;
+
+    if (nextStep > 1) {
         const timeDate = new Date(userSetting.time);
         template.receiverEmail = userSetting.receiverEmail;
         template.time = `${zeroPadding(timeDate.getHours())}:${zeroPadding(timeDate.getMinutes())}`;
@@ -221,8 +231,6 @@ function doGet(e) {
         template.isVerified = false;
         Logger.log(`ログイン中のユーザー設定 : 未設定`);
     }
-
-    template.doneStep = doneStep;
 
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -319,7 +327,7 @@ function getTodayUpdates(accessToken) {
         ].filter(post => isLatest(now, new Date(post.updateTime)))
             .map(post => {
                 post["type"] = post.workType ? "WORKS" : post.topicId ? "WORK_MATERIALS" : "ANNOUNCEMENTS";
-                
+
                 const userId = post.creatorUserId;
                 const chatIconUrl = "https://classroom-notification.s3.ap-northeast-1.amazonaws.com/chat_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24.png";
                 post["creatorUserPhotoTemplate"] = `<img class="materialIcon" src="${chatIconUrl}" alt="user_icon">`;
@@ -332,13 +340,13 @@ function getTodayUpdates(accessToken) {
                         post["creatorUserPhotoTemplate"] = `<img class="userIcon" src="${url}" alt="user_icon">`;
                     }
                     return post
-                } catch(e) {
+                } catch (e) {
                     Logger.log(`Cannot get userProfile. UserId : ${userId}. Error : ${e}`);
                     post["creatorUserName"] = "ユーザー名不明";
                     return post;
                 }
             }
-        );
+            );
 
         const courseData = {
             courseId: id,

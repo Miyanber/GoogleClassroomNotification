@@ -22,7 +22,7 @@
             color: var(--black);
         }
 
-        .header {
+        header {
             color: var(--black);
             border-bottom: var(--black) 1px solid;
             background-color: #eee;
@@ -59,6 +59,10 @@
                 border-bottom: #aaa solid .1em;
                 padding-left: .4em;
             }
+            
+            ul {
+                margin: 20px 0;
+            }
         }
 
         #form {
@@ -87,6 +91,11 @@
             font-size: 16px;
         }
 
+        a:has(button) {
+            text-decoration: none;
+            color: inherit;
+        }
+
         button {
             display: block;
             margin: 0 auto;
@@ -103,26 +112,12 @@
         }
 
         button:hover {
-            background-color: #218838;
+            background-color: #3a718d;
         }
 
         button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
-        }
-
-        .email-div {
-            background-color: #ffcdcd;
-            border-radius: 0 0 8px 8px;
-
-            &:has(.verified) {
-                background-color: #80f575;
-                margin-bottom: 1em;
-            }
-        }
-
-        .testMail-div {
-            text-align: center;
         }
 
         .formLink {
@@ -175,13 +170,13 @@
 
 <body>
 
-    <div class="header">
+    <header>
         <h1>
             <span>Google Classroom™ </span>
             <span>メール通知送信システム</span>
         </h1>
         <div class="author">Classroom Summary Notification ※試験運用中 by Miyanber</div>
-    </div>
+    </header>
 
     <div class="container">
         <div class="section">
@@ -196,8 +191,20 @@
         </div>
 
         <div class="section">
+            <? if (step == 1) { ?>
             <h2>利用登録</h2>
-            
+            <a href="?step=1">
+                <button type="button">利用登録を開始</button>
+            </a>
+            <? } else { ?>
+            <h2>利用設定</h2>
+            <form id="form" action="" method="post">
+                <label for="time">通知時刻</label>
+                <input type="time" name="time" id="time" value="<?= time ?>" required>
+                <label for="email">メールアドレス</label>
+                <input type="email" name="email" id="email" value="<?= receiverEmail ?>" required>
+                <button type="submit" id="submit">設定</button>
+            </form>
         </div>
 
         <div class="section">

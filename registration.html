@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --black: #333;
+        }
+
+        p {
+            color: var(--black);
+        }
+
+        header {
+            color: var(--black);
+            border-bottom: var(--black) 1px solid;
+            background-color: #eee;
+
+            .author {
+                font-size: 0.8em;
+                text-align: right;
+                padding: 0.5em;
+            }
+
+            h1 {
+                margin: 0;
+                font-size: 1.5em;
+                text-align: center;
+                padding: 1em 0 0;
+
+                span {
+                    display: inline-block;
+                }
+            }
+        }
+        
+        section {
+            max-width: 800px;
+            padding: 40px;
+            margin: 0 auto;
+
+            h2 {
+                border-bottom: #4D9BC1 solid 2px;
+                padding-left: .4em;
+                text-align: center;
+            }
+            
+            ul {
+                margin: 20px 0;
+            }
+        }
+
+        #form {
+            background: #fff;
+            padding: 1em;
+            margin: 1rem auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: max-content;
+            max-width: 100%;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 30em;
+            max-width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            display: block;
+            margin: 0 auto;
+            margin-top: 15px;
+            background-color: #4D9BC1;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 12em;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .email-div {
+            background-color: #ffcdcd;
+            border-radius: 0 0 8px 8px;
+
+            &:has(.verified) {
+                background-color: #80f575;
+                margin-bottom: 1em;
+            }
+        }
+
+        .note {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 20px;
+            border: 3px solid #e4d500;
+            background-color: #ffface;
+        }
+
+        footer {
+            border-top: var(--black) 1px solid;
+            background-color: #eee;
+            padding: 1em;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            <span>Google Classroom™ </span>
+            <span>メール通知送信システム</span>
+        </h1>
+        <div class="author">Classroom Summary Notification ※試験運用中 by Miyanber</div>
+    </header>
+
+    <? if (step === 1) { ?>
+    <section>
+        <h2>通知時刻・メールアドレスの設定 (1/4)</h2>
+        <p class="text">
+            以下のフォームより、通知時刻と受信用メールアドレスを送信して下さい。入力の前に、以下の項目をご確認ください。
+        </p>
+        <div class="note">
+            注意事項
+            <ul>
+                <li>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）は、メールを受信できないため利用できません。</li>
+                <li>システムの都合上、メールの送信は指定した時刻より5分程度遅れる場合があります。</li>
+            </ul>
+        </div>
+        <form id="form" action="" method="post">
+            <label for="time">通知時刻</label>
+            <input type="time" name="time" id="time" value="<?= time ?>" required>
+            <label for="email">メールアドレス</label>
+            <input type="email" name="email" id="email" value="<?= receiverEmail ?>" required>
+            <button type="submit" id="submit">設定</button>
+        </form>
+    </section>
+
+    <? } else if (step === 2) { ?>
+
+    <section>
+        <h2>メールアドレスの確認 (2/4)</h2>
+        <p>
+            受信用メールアドレスに、<?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> より確認メールを送信致しました。確認メールに記載されている認証用URLにアクセスして、認証を完了して下さい。 
+        </p>
+        <p>
+            ※5分以上経っても確認メールが届かない場合は、以下の原因が考えられます。
+            <ul>
+                <li>迷惑メールフォルダに入っている</li>
+                <li>メールアドレスが正しく入力されていない</li>
+                <li>確認メールの送信元 (<?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?>) が受信拒否設定されている</li>
+            </ul>
+        </p>
+    </section>
+
+    <? } else if (step === 3) { ?>
+
+    <section>
+        <h2>Google Classroom へのアクセス権限の付与 (3/4)</h2>
+        <p>
+            このシステムでは、ログイン中の Google アカウントが所属する Google Classroom クラスのお知らせや課題・資料にアクセスする権限を必要とします。以下のリンクから認証を完了して下さい。
+        </p>
+    </section>
+
+    <? } else if (step === 4) { ?>
+
+    <section>
+        <h2>Google Classroom へのアクセス権限の確認 (4/4)</h2>
+        <p>
+            設定されたメールアドレスに、過去1週間以内に更新されたクラスルームのお知らせや課題・資料（最大10件）を記載したメールを送信しました。正しく表示できているか確認して下さい。
+        </p>
+    </section>
+
+    <? } ?>
+
+    <footer>
+        <div class="copyright">
+            &copy; 2025 Miyanber
+        </div>
+        <p class="note">
+            Google Classroom は Google Inc. の商標です。
+        </p>
+    </footer>
+
+</body>
+</html>
