@@ -120,12 +120,17 @@
             }
         }
 
-        .note {
+        .attention {
             padding: 10px;
             margin: 10px;
             border-radius: 20px;
             border: 3px solid #e4d500;
             background-color: #ffface;
+        }
+
+        note {
+            font-size: 0.8em;
+            text-align: center;
         }
 
         footer {
@@ -152,7 +157,7 @@
         <p class="text">
             以下のフォームより、通知時刻と受信用メールアドレスを送信して下さい。入力の前に、以下の項目をご確認ください。
         </p>
-        <div class="note">
+        <div class="attention">
             注意事項
             <ul>
                 <li>学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）は、メールを受信できないため利用できません。</li>
@@ -197,10 +202,13 @@
     <? } else if (step === 4) { ?>
 
     <section>
-        <h2>Google Classroom へのアクセス権限の確認 (4/4)</h2>
+        <h2>利用登録完了 (4/4)</h2>
         <p>
-            設定されたメールアドレスに、過去1週間以内に更新されたクラスルームのお知らせや課題・資料（最大10件）を記載したメールを送信しました。正しく表示できているか確認して下さい。
+            利用登録が全て完了しました。
         </p>
+        <a href="<?= getAppUrl() ?>">
+            <button type="button">トップページに戻る</button>
+        </a>
     </section>
 
     <? } ?>
@@ -213,6 +221,33 @@
             Google Classroom は Google Inc. の商標です。
         </p>
     </footer>
+
+    <script>
+        const form = document.getElementById('form');
+        const submitButton = document.getElementById('submit');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitButton.disabled = true;
+            const time = document.getElementById('time').value;
+            const email = document.getElementById('email').value;
+            console.log(time);
+            if (time === '' || email === '') {
+                alert('フォームを入力してください。');
+                submitButton.disabled = false;
+                return;
+            } else if (email.includes("rakunan-h.ed.jp")) {
+                alert('学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信することができません。他のメールアドレスをご入力ください。');
+                submitButton.disabled = false;
+                return;
+            }
+            google.script.run.withSuccessHandler(nextStep => {
+                window.open("<?= getAppUrl() ?>?step=" + nextStep);
+            }).saveUnverifiedUser(time, email);
+
+            console.log('submit');
+        });
+    </script>
 
 </body>
 </html>

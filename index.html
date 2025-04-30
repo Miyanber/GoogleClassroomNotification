@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <!-- 以下の meta タグはGASでは適用されないので注意 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base target="_top">
     <style>
         body {
             margin: 0;
@@ -191,9 +192,9 @@
         </div>
 
         <div class="section">
-            <? if (step == 1) { ?>
+            <? if (step < 4) { ?>
             <h2>利用登録</h2>
-            <a href="?step=1">
+            <a href="<?= getAppUrl() ?>?step=1">
                 <button type="button">利用登録を開始</button>
             </a>
             <? } else { ?>
@@ -269,41 +270,6 @@
     <script>
         const form = document.getElementById('form');
         const submitButton = document.getElementById('submit');
-
-        const testMailButton = document.getElementById('testMail');
-        testMailButton.addEventListener('click', () => {
-            testMailButton.disabled = true;
-            const email = document.getElementById('email').value;
-            google.script.run.withSuccessHandler(success => {
-                if (!success) {
-                    alert('メールが送信できません。先に設定を行ってください。既に設定を行っている場合は、メールアドレスに誤りがないか確認して下さい。');
-                    testMailButton.disabled = false;
-                } else {
-                    alert(`テストメールを送信しました。設定したメールアドレスにテストメールが届いていることを確認して下さい。`);
-                    testMailButton.disabled = false;
-                }
-            }).testMail();
-        });
-
-        const emailInput = document.getElementById('email');
-        const emailStatus = document.getElementById('emailStatus');
-        const currentEmail = emailInput.value;
-        const isVerified = emailStatus.classList.contains('verified');
-        function updateEmailStatus() {
-            const email = emailInput.value;
-            if (currentEmail && email === currentEmail && isVerified) {
-                emailStatus.textContent = '認証済み';
-                emailStatus.classList.add('verified');
-            } else if (email.includes("rakunan-h.ed.jp")) {
-                emailStatus.textContent = '利用不可';
-                emailStatus.classList.remove('verified');
-            } else {
-                emailStatus.textContent = '未認証';
-                emailStatus.classList.remove('verified');
-            }
-        }
-        updateEmailStatus();
-        emailInput.addEventListener('input', () => updateEmailStatus());
 
         form.addEventListener('submit', (e) => {
             e.preventDefault();

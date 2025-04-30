@@ -105,39 +105,31 @@ function getActiveUserSetting() {
 
 /**
  * スプレッドシートにユーザー設定を保存
+ * @returns {object} - 保存されたユーザー設定オブジェクト
  */
-function createOrUpdateUser(receiverEmail, time) {
+function updateUserSetting(receiverEmail, time) {
     const userSetting = getActiveUserSetting();
 
     const expiredTime = new Date();
     expiredTime.setMinutes(expiredTime.getMinutes() + 10);
     const token = Utilities.getUuid();
     const accountEmail = Session.getActiveUser().getEmail();
-    let shouldSendMail = false;
 
     if (userSetting) {
-        const emailChanged = userSetting.receiverEmail !== receiverEmail;
-        if (emailChanged || userSetting.isVerified === false) {
+        if (userSetting.receiverEmail !== receiverEmail || userSetting.isVerified === false) {
+            // メールアドレスが変更された場合、または未確認の場合
             USERS_SHEET.getRange(userSetting.id + 1, 3, 1, 5).setValues([[receiverEmail, time, false, token, expiredTime]]);
-            shouldSendMail = true;
         } else {
+            // メールアドレスが変更されていない場合
             USERS_SHEET.getRange(userSetting.id + 1, 3, 1, 3).setValues([[receiverEmail, time, true]]);
         }
     } else {
-        USERS_SHEET.appendRow([USERS_SHEET.getLastRow() - 1, accountEmail, receiverEmail, time, false, token, expiredTime]);
-        shouldSendMail = true;
-    }
-
-    if (shouldSendMail) {
-        try {
-            sendVerificationMail(receiverEmail, token, expiredTime);
-        } catch (e) {
-            // TODO: 送信失敗時の処理
-            Logger.log(`[Error] メール送信失敗: ${e.message}`);
-        }
+        // 新規ユーザーの場合
+        USERS_SHEET.appendRow([USERS_SHEET.getLastRow(), accountEmail, receiverEmail, time, false, token, expiredTime]);
     }
 
     Logger.log(`[User Settings Saved] { userId: ${USERS_SHEET.getLastRow() - 1}, accountEmail: ${accountEmail}, receiverEmail: ${receiverEmail}, time: ${time} }`);
+    return getActiveUserSetting();
 }
 
 /**
@@ -201,18 +193,19 @@ function doGet(e) {
     const service = getOAuthService(accountEmail);
     const userSetting = getActiveUserSetting();
 
-    let nextStep = 1; // 1: 設定入力, 2: メールアドレス確認, 3: OAuth認証, (4: GoogleClassroom権限確認,) 5: 全て完了済み
+    let nextStep = 1; // 1: 設定入力, 2: メールアドレス確認, 3: OAuth認証, 4: 全て完了済み
 
     if (userSetting) {
         nextStep = userSetting.isVerified ? 3 : 2;
-        if (service.hasAccess()) {
-            nextStep = 5;
+        if (nextStep == 3 && service.hasAccess()) {
+            nextStep = 4;
         }
     }
 
-    if ((nextStep == 1 && e.parameter.step == 1) || nextStep == 2 || nextStep == 3 || nextStep == 4) {
+    if (nextStep == e.parameter.step && (nextStep >= 1 && nextStep <= 4)) {
         template = HtmlService.createTemplateFromFile("registration");
     } else {
+        Logger.log(`次のステップ : ${nextStep}`);
         template = HtmlService.createTemplateFromFile("index");
     }
 
@@ -240,20 +233,22 @@ function doGet(e) {
 }
 
 /**
+ * Step1: メールアドレスと時間を保存する関数
  * スプレッドシートにemail,timeを保存する。テンプレート上から呼び出す。
- * @returns {string | null} - OAuth認証済みならnull, 未認証であれば認証URLを返す
+ * @returns {number} - 次のstepの番号
  */
 function saveUnverifiedUser(time, email) {
-    createOrUpdateUser(email, time);
-    const accountEmail = Session.getActiveUser().getEmail();
-    Logger.log(`saved unverified user: { accountEmail: ${accountEmail}, receiverEmail: ${email}, time: ${time} }`);
-    const service = getOAuthService(accountEmail);
-    if (service.hasAccess()) {
-        Logger.log('[OAuth] already authorized');
-        return null;
+    const userSettings = updateUserSetting(email, time);
+    if (!userSettings.isVerified) {
+        sendVerificationMail(userSettings.receiverEmail, userSettings.token, userSettings.expiredTime);
+        return 2; // メールアドレス確認
     } else {
-        Logger.log('[OAuth] start authorization');
-        return service.getAuthorizationUrl(accountEmail);
+        const service = getOAuthService(accountEmail);
+        if (service.hasAccess()) {
+            return 4; // OAuth認証済み
+        } else {
+            return 3;
+        }
     }
 }
 
