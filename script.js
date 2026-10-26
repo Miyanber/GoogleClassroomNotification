@@ -1,11 +1,25 @@
-const now = new Date();
-now.setDate(now.getDate());
-const tomorrow = new Date();
-tomorrow.setDate(now.getDate() + 1);
+/**
+ * Google Classroom Notification System
+ * Google Apps Script (V8)
+ */
 
-const USERS_SHEET = SpreadsheetApp.openById('1ii2MBtSLK5vmq9PNP6y0RBtvQsxwefstCfQ_HNoIFyI').getSheetByName('Sheet1');
+/**
+ * ユーザー設定用スプレッドシートを取得
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
+ */
+function getUsersSheet() {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+    if (!spreadsheetId) {
+        throw new Error('スクリプトプロパティ SPREADSHEET_ID が設定されていません。プロジェクトの設定から設定してください。');
+    }
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName('Sheet1') || spreadsheet.getSheets()[0];
+    return sheet;
+}
 
-const USE_CACHE = PropertiesService.getScriptProperties().getProperty('USE_CACHE') === 'True';
+function isCacheEnabled() {
+    return PropertiesService.getScriptProperties().getProperty('USE_CACHE') === 'True';
+}
 
 /**
  * Google Classroom API に GET リクエストを送る関数
@@ -18,13 +32,20 @@ const USE_CACHE = PropertiesService.getScriptProperties().getProperty('USE_CACHE
 function fetchWrapper(accessToken, url) {
     const options = {
         method: "GET",
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        muteHttpExceptions: true
     };
 
     try {
         Logger.log(`[API Request] ${url}`);
         const response = UrlFetchApp.fetch(`https://classroom.googleapis.com/v1/${url}`, options);
-        return JSON.parse(response.getContentText());
+        const responseCode = response.getResponseCode();
+        if (responseCode >= 200 && responseCode < 300) {
+            return JSON.parse(response.getContentText());
+        } else {
+            Logger.log(`[API Error] Status: ${responseCode}, Body: ${response.getContentText()}`);
+            return {};
+        }
     } catch (e) {
         Logger.log(`[Error] APIリクエスト失敗: ${url}, Error: ${e.message}`);
         throw new Error(`Failed to fetch: ${e}`);
@@ -36,11 +57,11 @@ function fetchWrapper(accessToken, url) {
  * @returns {boolean} - 送信成功なら true, 失敗なら false
  */
 function testMail() {
-    const values = getActiveUserSetting();
-    if (!values) return false;
+    const userSetting = getActiveUserSetting();
+    if (!userSetting || !userSetting.receiverEmail) return false;
 
     try {
-        const email = values[1];
+        const email = userSetting.receiverEmail;
         MailApp.sendEmail(email, "【Classroom Summary Notification】テストメール送信", "メール送信テストです。");
         Logger.log(`[Mail Sent] テストメール送信成功: ${email}`);
         return true;
@@ -53,8 +74,8 @@ function testMail() {
 function sendVerificationMail(receiverEmail, token, expirationTime) {
     const subject = "【Classroom Summary Notification】メールアドレス確認";
     const template = HtmlService.createTemplateFromFile('verification_template');
-    template.verificationUrl = `${getAppUrl()}?email=${receiverEmail}&token=${token}`;
-    template.expirationTime = expirationTime;
+    template.verificationUrl = `${getAppUrl()}?email=${encodeURIComponent(receiverEmail)}&token=${encodeURIComponent(token)}`;
+    template.expirationTime = Utilities.formatDate(new Date(expirationTime), "Asia/Tokyo", "yyyy/MM/dd HH:mm");
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
     
@@ -70,35 +91,48 @@ function sendVerificationMail(receiverEmail, token, expirationTime) {
  *
  * @param {string} email
  * @param {string} token
- * @return {string} - トークンが正しければ "OK" を返す。トークンが無効な場合はエラー内容を返す。
+ * @return {boolean} - トークンが正しければ true
  */
 function verifyEmail(email, token) {
+    if (!token || !email) return false;
+    const now = new Date();
     const userSetting = getActiveUserSetting();
     if (!userSetting || userSetting.receiverEmail !== email || userSetting.token !== token) return false;
     const expiredTime = new Date(userSetting.expiredTime);
-    if (now.getTime() > expiredTime.getTime()) return false;
-    USERS_SHEET.getRange(userSetting.id + 1, 5, 1, 3).setValues([[true, "", ""]]);
+    if (isNaN(expiredTime.getTime()) || now.getTime() > expiredTime.getTime()) return false;
+
+    const sheet = getUsersSheet();
+    sheet.getRange(userSetting.id + 1, 5, 1, 3).setValues([[true, "", ""]]);
     return true;
 }
 
+/**
+ * 全ユーザー設定をスプレッドシートから取得
+ */
 function getAllUserSettings() {
-    const data = USERS_SHEET.getRange(2, 1, USERS_SHEET.getLastRow() - 1, USERS_SHEET.getLastColumn()).getValues();
-    return data.map(row => ({
-        id: row[0],
+    const sheet = getUsersSheet();
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return [];
+    
+    const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    return data.map((row, index) => ({
+        id: row[0] !== "" ? Number(row[0]) : index + 1,
         accountEmail: row[1],
         receiverEmail: row[2],
         time: row[3],
-        isVerified: row[4],
-        token: row[5]
+        isVerified: row[4] === true || String(row[4]).toLowerCase() === 'true',
+        token: row[5],
+        expiredTime: row[6]
     }));
 }
 
 /**
- * スプレッドシートからユーザー設定を取得
+ * スプレッドシートから現在のアカウントのユーザー設定を取得
  * @returns {object | null} - ユーザー設定オブジェクト、または null
  */
 function getActiveUserSetting() {
     const accountEmail = Session.getActiveUser().getEmail();
+    if (!accountEmail) return null;
     return getAllUserSettings()
         .find(user => user.accountEmail === accountEmail) || null;
 }
@@ -107,6 +141,7 @@ function getActiveUserSetting() {
  * スプレッドシートにユーザー設定を保存
  */
 function createOrUpdateUser(receiverEmail, time) {
+    const sheet = getUsersSheet();
     const userSetting = getActiveUserSetting();
 
     const expiredTime = new Date();
@@ -118,13 +153,14 @@ function createOrUpdateUser(receiverEmail, time) {
     if (userSetting) {
         const emailChanged = userSetting.receiverEmail !== receiverEmail;
         if (emailChanged || userSetting.isVerified === false) {
-            USERS_SHEET.getRange(userSetting.id + 1, 3, 1, 5).setValues([[receiverEmail, time, false, token, expiredTime]]);
+            sheet.getRange(userSetting.id + 1, 3, 1, 5).setValues([[receiverEmail, time, false, token, expiredTime]]);
             shouldSendMail = true;
         } else {
-            USERS_SHEET.getRange(userSetting.id + 1, 3, 1, 3).setValues([[receiverEmail, time, true]]);
+            sheet.getRange(userSetting.id + 1, 3, 1, 3).setValues([[receiverEmail, time, true]]);
         }
     } else {
-        USERS_SHEET.appendRow([USERS_SHEET.getLastRow() - 1, accountEmail, receiverEmail, time, false, token, expiredTime]);
+        const newId = sheet.getLastRow(); // ヘッダーが1行目なら次行のIDは1
+        sheet.appendRow([newId, accountEmail, receiverEmail, time, false, token, expiredTime]);
         shouldSendMail = true;
     }
 
@@ -132,26 +168,50 @@ function createOrUpdateUser(receiverEmail, time) {
         try {
             sendVerificationMail(receiverEmail, token, expiredTime);
         } catch (e) {
-            // TODO: 送信失敗時の処理
             Logger.log(`[Error] メール送信失敗: ${e.message}`);
         }
     }
 
-    Logger.log(`[User Settings Saved] { userId: ${USERS_SHEET.getLastRow() - 1}, accountEmail: ${accountEmail}, receiverEmail: ${receiverEmail}, time: ${time} }`);
+    Logger.log(`[User Settings Saved] { accountEmail: ${accountEmail}, receiverEmail: ${receiverEmail}, time: ${time} }`);
 }
 
 /**
- * 文字列の改行を `<br>` タグに変換
+ * HTMLエスケープ処理（XSS / メール内HTMLインジェクション防止）
+ */
+function escapeHtml(text) {
+    if (text == null) return "";
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * URLエスケープ処理（危険なスキームを排除）
+ */
+function escapeUrl(url) {
+    if (!url) return "#";
+    const cleaned = String(url).trim();
+    if (/^https?:\/\//i.test(cleaned)) {
+        return escapeHtml(cleaned);
+    }
+    return "#";
+}
+
+/**
+ * 文字列をエスケープして改行を `<br>` タグに変換
  */
 function toBrTag(text) {
-    return text.replace(/\n/g, "<br>");
+    return escapeHtml(text).replace(/\n/g, "<br>");
 }
 
 /**
  * 指定したDateが過去24時間以内か判定
  */
-function isLatest(today, target) {
-    return (today.getTime() - target.getTime()) < 1000 * 60 * 60 * 24;
+function isLatest(now, target) {
+    return (now.getTime() - target.getTime()) < 1000 * 60 * 60 * 24;
 }
 
 /**
@@ -165,7 +225,7 @@ function setCache(key, value) {
  * キャッシュの取得
  */
 function getCache(key) {
-    return USE_CACHE ? CacheService.getScriptCache().get(key) : null;
+    return isCacheEnabled() ? CacheService.getScriptCache().get(key) : null;
 }
 
 /**
@@ -186,12 +246,13 @@ function getAppUrl() {
  * GETリクエスト用関数
  */
 function doGet(e) {
+    e = e || { parameter: {} };
     if (e.parameter.email && e.parameter.token) {
         const email = e.parameter.email;
         const token = e.parameter.token;
         const result = verifyEmail(email, token);
         if (!result) {
-            return HtmlService.createHtmlOutput("メールアドレスの確認に失敗しました。設定画面に戻り、再度お試しください。");
+            return HtmlService.createHtmlOutput("メールアドレスの確認に失敗しました。リンクの有効期限が切れているか、無効なトークンです。設定画面に戻り、再度お試しください。");
         }
     }
 
@@ -202,24 +263,28 @@ function doGet(e) {
     const service = getOAuthService(accountEmail);
     const userSetting = getActiveUserSetting();
 
-    let doneStep = 0; // 0: 未認証, 1: 設定入力完了, 2: メーアドレス確認完了, 3: OAuth認証完了
+    let doneStep = 0; // 0: 未認証, 1: 設定入力完了, 2: メールアドレス確認完了, 3: OAuth認証完了
 
     if (userSetting) {
         doneStep = userSetting.isVerified ? 2 : 1;
     }
 
-    if (service.hasAccess() && userSetting) {
+    if (service && service.hasAccess() && userSetting) {
         doneStep = 3;
         const timeDate = new Date(userSetting.time);
         template.receiverEmail = userSetting.receiverEmail;
-        template.time = `${zeroPadding(timeDate.getHours())}:${zeroPadding(timeDate.getMinutes())}`;
+        if (!isNaN(timeDate.getTime())) {
+            template.time = `${zeroPadding(timeDate.getHours())}:${zeroPadding(timeDate.getMinutes())}`;
+        } else {
+            template.time = String(userSetting.time || "");
+        }
         template.isVerified = userSetting.isVerified;
         Logger.log(`ログイン中のユーザー設定 : { Email: ${template.receiverEmail}, Time: ${template.time}, isVerified: ${template.isVerified} }`);
     } else {
-        template.receiverEmail = "";
-        template.time = "";
-        template.isVerified = false;
-        Logger.log(`ログイン中のユーザー設定 : 未設定`);
+        template.receiverEmail = userSetting ? userSetting.receiverEmail : "";
+        template.time = userSetting ? String(userSetting.time || "") : "";
+        template.isVerified = userSetting ? userSetting.isVerified : false;
+        Logger.log(`ログイン中のユーザー設定 : 未完了`);
     }
 
     template.doneStep = doneStep;
@@ -227,7 +292,11 @@ function doGet(e) {
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
     htmlOutput.setTitle('Google Classroom™ メール通知送信システム');
-    htmlOutput.setFaviconUrl('https://drive.google.com/uc?id=1YhNuGieqF_rUP02Tdo95uaB8w3pG_USf&.png');
+    
+    const faviconUrl = PropertiesService.getScriptProperties().getProperty('FAVICON_URL');
+    if (faviconUrl) {
+        htmlOutput.setFaviconUrl(faviconUrl);
+    }
     return htmlOutput;
 }
 
@@ -240,32 +309,47 @@ function saveUnverifiedUser(time, email) {
     const accountEmail = Session.getActiveUser().getEmail();
     Logger.log(`saved unverified user: { accountEmail: ${accountEmail}, receiverEmail: ${email}, time: ${time} }`);
     const service = getOAuthService(accountEmail);
-    if (service.hasAccess()) {
+    if (service && service.hasAccess()) {
         Logger.log('[OAuth] already authorized');
         return null;
-    } else {
+    } else if (service) {
         Logger.log('[OAuth] start authorization');
         return service.getAuthorizationUrl(accountEmail);
     }
+    return null;
 }
 
 /**
- * 現在時刻と指定時刻が一致していれば、メール通知を送信する関数
+ * 現在時刻と指定時刻が一致していれば、メール通知を送信する関数（トリガー実行用）
  */
 function triggerEveryMinute() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
     const allUserSettings = getAllUserSettings();
 
     allUserSettings.forEach(setting => {
+        if (!setting.isVerified) return;
         const accountEmail = setting.accountEmail;
         const email = setting.receiverEmail;
-        const rawTime = new Date(setting.time);
-        const time = new Date(now.getFullYear(), now.getMonth(), now.getDate(), rawTime.getHours(), rawTime.getMinutes());
+        
+        let targetHour = -1;
+        let targetMinute = -1;
+        
+        if (setting.time instanceof Date) {
+            targetHour = setting.time.getHours();
+            targetMinute = setting.time.getMinutes();
+        } else if (typeof setting.time === 'string' && setting.time.includes(':')) {
+            const parts = setting.time.split(':');
+            targetHour = parseInt(parts[0], 10);
+            targetMinute = parseInt(parts[1], 10);
+        }
 
-        if (now.getHours() == time.getHours() && now.getMinutes() == time.getMinutes()) {
+        if (currentHour === targetHour && currentMinute === targetMinute) {
             sendReminder(accountEmail, email);
         }
 
-        Logger.log(`Email: ${email}, Time: ${time}`);
+        Logger.log(`Email: ${email}, Target: ${targetHour}:${targetMinute}, Current: ${currentHour}:${currentMinute}`);
     });
 }
 
@@ -273,11 +357,11 @@ function triggerEveryMinute() {
  * メール通知を送信する関数
  */
 function sendReminder(accountEmail, email) {
-    const recipient = email; // 送信先メールアドレス
+    const recipient = email;
     const subject = `【リマインダー】本日更新された GoogleClassroom のお知らせ`;
     const template = HtmlService.createTemplateFromFile('mail_template');
     const service = getOAuthService(accountEmail);
-    if (service.hasAccess()) {
+    if (service && service.hasAccess()) {
         const accessToken = service.getAccessToken();
         template.courses = getTodayUpdates(accessToken);
         template.hasAccess = true;
@@ -285,15 +369,12 @@ function sendReminder(accountEmail, email) {
         Logger.log("[OAuth] unauthorized. cannot get classroom updates.");
         template.courses = [];
         template.hasAccess = false;
-        // ここで再認証を行うURLをテンプレートに渡して再認証させる
-        // そもそものGoogle認証も、テストメールに含ませた方が理想的？
     }
 
     const htmlOutput = template.evaluate();
     htmlOutput.addMetaTag('viewport', 'width=device-width, initial-scale=1');
     const html = htmlOutput.getContent();
 
-    // メール送信
     MailApp.sendEmail(recipient, subject, html, { htmlBody: html });
 }
 
@@ -301,8 +382,13 @@ function sendReminder(accountEmail, email) {
  * Google Classroom の更新情報を取得
  */
 function getTodayUpdates(accessToken) {
+    const now = new Date();
     let courses = [];
     const fetchedCourses = fetchWrapper(accessToken, "courses");
+    if (!fetchedCourses || !fetchedCourses.courses) return courses;
+
+    const chatIconUrl = PropertiesService.getScriptProperties().getProperty('CHAT_ICON_URL') 
+        || "https://classroom-notification.s3.ap-northeast-1.amazonaws.com/chat_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24.png";
 
     for (const { id } of fetchedCourses.courses) {
         const cachedData = getCache(id);
@@ -312,29 +398,34 @@ function getTodayUpdates(accessToken) {
         }
 
         const classroom = fetchWrapper(accessToken, `courses/${id}`);
+        const announcementsRes = fetchWrapper(accessToken, `courses/${id}/announcements`);
+        const courseWorkRes = fetchWrapper(accessToken, `courses/${id}/courseWork`);
+        const courseWorkMaterialsRes = fetchWrapper(accessToken, `courses/${id}/courseWorkMaterials`);
+
         const posts = [
-            ...fetchWrapper(accessToken, `courses/${id}/announcements`).announcements || [],
-            ...fetchWrapper(accessToken, `courses/${id}/courseWork`).courseWork || [],
-            ...fetchWrapper(accessToken, `courses/${id}/courseWorkMaterials`).courseWorkMaterial || []
-        ].filter(post => isLatest(now, new Date(post.updateTime)))
+            ...(announcementsRes.announcements || []),
+            ...(courseWorkRes.courseWork || []),
+            ...(courseWorkMaterialsRes.courseWorkMaterial || [])
+        ].filter(post => post.updateTime && isLatest(now, new Date(post.updateTime)))
             .map(post => {
                 post["type"] = post.workType ? "WORKS" : post.topicId ? "WORK_MATERIALS" : "ANNOUNCEMENTS";
                 
                 const userId = post.creatorUserId;
-                const chatIconUrl = "https://classroom-notification.s3.ap-northeast-1.amazonaws.com/chat_24dp_F3F3F3_FILL0_wght400_GRAD0_opsz24.png";
-                post["creatorUserPhotoTemplate"] = `<img class="materialIcon" src="${chatIconUrl}" alt="user_icon">`;
-                let userProfile;
+                post["creatorUserPhotoTemplate"] = `<img class="materialIcon" src="${escapeUrl(chatIconUrl)}" alt="user_icon">`;
                 try {
-                    userProfile = fetchWrapper(accessToken, `userProfiles/${userId}`);
-                    post["creatorUserName"] = userProfile.name.fullName;
-                    if (userProfile.photoUrl) {
-                        const url = `https://${userProfile.photoUrl.split("//")[1].replace("=mo", "")}=s72`;
-                        post["creatorUserPhotoTemplate"] = `<img class="userIcon" src="${url}" alt="user_icon">`;
+                    const userProfile = fetchWrapper(accessToken, `userProfiles/${userId}`);
+                    post["creatorUserName"] = userProfile && userProfile.name ? escapeHtml(userProfile.name.fullName) : "教員";
+                    if (userProfile && userProfile.photoUrl) {
+                        const parts = userProfile.photoUrl.split("//");
+                        if (parts[1]) {
+                            const url = `https://${parts[1].replace("=mo", "")}=s72`;
+                            post["creatorUserPhotoTemplate"] = `<img class="userIcon" src="${escapeUrl(url)}" alt="user_icon">`;
+                        }
                     }
-                    return post
+                    return post;
                 } catch(e) {
                     Logger.log(`Cannot get userProfile. UserId : ${userId}. Error : ${e}`);
-                    post["creatorUserName"] = "ユーザー名不明";
+                    post["creatorUserName"] = "教員";
                     return post;
                 }
             }
@@ -342,7 +433,7 @@ function getTodayUpdates(accessToken) {
 
         const courseData = {
             courseId: id,
-            courseName: classroom.name,
+            courseName: classroom.name || "名称未設定クラス",
             posts: posts
         };
         courses.push(courseData);
@@ -352,9 +443,7 @@ function getTodayUpdates(accessToken) {
     return courses;
 }
 
-
 // ##### ここから下はOAuth2関連の関数 #####
-
 
 /**
  * OAuth2 認証サービスを取得
@@ -362,11 +451,19 @@ function getTodayUpdates(accessToken) {
 function getOAuthService(accountEmail) {
     if (!accountEmail) return null;
 
+    const clientId = PropertiesService.getScriptProperties().getProperty('CLIENT_ID');
+    const clientSecret = PropertiesService.getScriptProperties().getProperty('CLIENT_SECRET');
+
+    if (!clientId || !clientSecret) {
+        Logger.log('[Warning] CLIENT_ID または CLIENT_SECRET がスクリプトプロパティに設定されていません。');
+        return null;
+    }
+
     return OAuth2.createService(`GoogleClassroom_${accountEmail}`)
         .setAuthorizationBaseUrl('https://accounts.google.com/o/oauth2/auth')
         .setTokenUrl('https://accounts.google.com/o/oauth2/token')
-        .setClientId(PropertiesService.getScriptProperties().getProperty('CLIENT_ID'))
-        .setClientSecret(PropertiesService.getScriptProperties().getProperty('CLIENT_SECRET'))
+        .setClientId(clientId)
+        .setClientSecret(clientSecret)
         .setCallbackFunction('authCallback')
         .setPropertyStore(PropertiesService.getUserProperties())
         .setScope([
@@ -386,6 +483,9 @@ function getOAuthService(accountEmail) {
 // OAuth2認証のコールバック関数
 function authCallback(request) {
     const service = getOAuthService(Session.getActiveUser().getEmail());
+    if (!service) {
+        return HtmlService.createHtmlOutput('認証設定にエラーが発生しました。管理者に連絡してください。');
+    }
     const isAuthorized = service.handleCallback(request);
     if (isAuthorized) {
         return HtmlService.createHtmlOutput('認証が完了しました。このウィンドウを閉じてください。');
@@ -397,6 +497,7 @@ function authCallback(request) {
 // 認証を開始するための関数
 function startOAuth2(email) {
     const service = getOAuthService(email);
+    if (!service) return null;
     const authorizationUrl = service.getAuthorizationUrl(email);
     Logger.log('認証URL: ' + authorizationUrl);
     return authorizationUrl;
@@ -404,26 +505,29 @@ function startOAuth2(email) {
 
 function resetOAuth() {
     const service = getOAuthService(Session.getActiveUser().getEmail());
-    service.reset();
+    if (service) {
+        service.reset();
+    }
 }
 
 // ##### Use only in templates #####
 
 // <li>タグ内に添付ファイル情報を出力
 function getMaterialTemplate(material) {
-    let url, title;
-    if ("driveFile" in material) {
-        url = material.driveFile.driveFile.alternateLink;
-        title = material.driveFile.driveFile.title;
-    } else if ("youtubeVideo" in material) {
-        url = material.youtubeVideo.alternateLink;
-        title = material.youtubeVideo.title;
-    } else if ("link" in material) {
-        url = material.link.url;
-        title = material.link.title;
-    } else if ("form" in material) {
-        url = material.form.formUrl;
-        title = material.form.title;
+    let url = "#";
+    let title = "";
+    if ("driveFile" in material && material.driveFile && material.driveFile.driveFile) {
+        url = material.driveFile.driveFile.alternateLink || "#";
+        title = material.driveFile.driveFile.title || "ドライブ添付ファイル";
+    } else if ("youtubeVideo" in material && material.youtubeVideo) {
+        url = material.youtubeVideo.alternateLink || "#";
+        title = material.youtubeVideo.title || "YouTube動画";
+    } else if ("link" in material && material.link) {
+        url = material.link.url || "#";
+        title = material.link.title || material.link.url || "添付リンク";
+    } else if ("form" in material && material.form) {
+        url = material.form.formUrl || "#";
+        title = material.form.title || "Googleフォーム";
     }
-    return `<li><a href="${url}" target="_blank">${title}</a></li>`;
+    return `<li><a href="${escapeUrl(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a></li>`;
 }

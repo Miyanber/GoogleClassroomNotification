@@ -3,11 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- 以下の meta タグはGASでは適用されないので注意 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
         * {
@@ -20,6 +20,7 @@
 
         p {
             color: var(--black);
+            line-height: 1.6;
         }
 
         .header {
@@ -63,7 +64,7 @@
 
         #form {
             background: #fff;
-            padding: 1em;
+            padding: 1.5em;
             margin: 1rem auto;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -76,6 +77,7 @@
             display: block;
             margin: 10px 0 5px;
             font-weight: bold;
+            text-align: left;
         }
 
         input {
@@ -121,6 +123,11 @@
             }
         }
 
+        .emailStatus {
+            font-size: 0.85em;
+            padding: 4px;
+        }
+
         .testMail-div {
             text-align: center;
         }
@@ -143,6 +150,7 @@
 
         .sampleImage {
             width: 20em;
+            max-width: 100%;
             margin: 1em;
         }
 
@@ -155,8 +163,68 @@
 
         .intro-text {
             margin-left: 1em;
-            font-size: 1.2em;
+            font-size: 1.1em;
+            text-align: left;
+            line-height: 1.6;
+        }
+
+        .flow_design05 {
+            width: 100%;
+        }
+
+        .flow05 {
+            padding-left: 0;
+        }
+
+        .flow05>li {
+            list-style-type: none;
+            position: relative;
+            padding-left: 50px;
+            opacity: 0.6;
+        }
+
+        .flow05>li:not(:last-child) {
+            padding-bottom: 2rem;
+        }
+
+        .flow05>li .icon05 {
+            width: 2em;
+            height: 2em;
+            line-height: 2em;
             text-align: center;
+            border-radius: 100vh;
+            display: inline-block;
+            background: #4D9BC1;
+            color: #fff;
+            position: absolute;
+            left: 0;
+        }
+
+        .flow05>li:not(:last-child)::before {
+            content: '';
+            background: #c3c3c3;
+            width: 4px;
+            height: 100%;
+            position: absolute;
+            top: calc(50%);
+            left: 19px;
+            -ms-transform: translateY(-50%);
+            -webkit-transform: translateY(-50%);
+            transform: translateY(-50%);
+        }
+
+        .flow05>li dl dt {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #4D9BC1;
+        }
+
+        .flow05>li dl dd {
+            margin-left: 0;
+        }
+
+        .flow05>li.activeFlow {
+            opacity: 1;
         }
 
         @media (max-width: 700px) {
@@ -187,7 +255,8 @@
         <div class="section">
             <h2>サービス内容</h2>
             <div class="intro">
-                <img class="sampleImage" src="https://lh3.google.com/u/0/d/19TyDDnw8aC-_4imNXuy3rICiePrhbpNX">
+                <? const sampleImgUrl = PropertiesService.getScriptProperties().getProperty('SAMPLE_IMAGE_URL') || 'https://lh3.google.com/u/0/d/19TyDDnw8aC-_4imNXuy3rICiePrhbpNX'; ?>
+                <img class="sampleImage" src="<?= sampleImgUrl ?>" alt="サービス概要イメージ">
                 <div class="intro-text">
                     過去24時間以内に更新された Google Classroom クラスのお知らせや課題・資料を、毎日メール通知致します。<br><br>
                     複数クラスの更新内容をまとめて閲覧できます。
@@ -196,8 +265,73 @@
         </div>
 
         <div class="section">
-            <h2>利用登録</h2>
-            
+            <h2>利用方法</h2>
+            <div class="flow_design05">
+                <ul class="flow05">
+                    <li id="step1" class="<? if (doneStep >= 0) { ?>activeFlow<? } ?>">
+                        <dl>
+                            <dt><span class="icon05">1</span>通知時刻・受信用メールアドレスの設定</dt>
+                            <dd>以下のフォームより、通知時刻と受信用メールアドレスを送信して下さい。</dd>
+                        </dl>
+                        <form id="form" action="" method="post">
+                            <label for="time">通知時刻</label>
+                            <input type="time" name="time" id="time" value="<?= time ?>" required>
+                            <label for="email">メールアドレス</label>
+                            <div class="email-div">
+                                <input type="email" name="email" id="email" value="<?= receiverEmail ?>" required>
+                                <div id="emailStatus" class="emailStatus <? if (isVerified) { ?>verified<? } ?>">
+                                    <? if (isVerified) { ?>認証済み
+                                    <? } else { ?>未認証
+                                    <? } ?>
+                                </div>
+                            </div>
+                            <button type="submit" id="submit">設定</button>
+                        </form>
+                    </li>
+
+                    <li id="step2" class="<? if (doneStep >= 1) { ?>activeFlow<? } ?>">
+                        <dl>
+                            <dt><span class="icon05">2</span>メールアドレスの確認</dt>
+                            <dd>
+                                受信用メールアドレスに確認メールを送信致します。確認メールに記載されている認証用URLにアクセスして、認証を完了して下さい。
+                            </dd>
+                        </dl>
+                        <p>
+                            ※確認メールが届かない場合は、以下の原因が考えられます。
+                            <ul>
+                                <li>迷惑メールフォルダに入っている</li>
+                                <li>メールアドレスが正しく入力されていない</li>
+                                <li>送信元アドレスが受信拒否設定されている</li>
+                            </ul>
+                        </p>
+                    </li>
+
+                    <li id="step3" class="<? if (doneStep >= 2) { ?>activeFlow<? } ?>">
+                        <dl>
+                            <dt><span class="icon05">3</span>Google Classroom へのアクセス権限の付与</dt>
+                            <dd>
+                                このシステムでは、ログイン中の Google アカウントが所属する Google Classroom クラスのお知らせや課題・資料にアクセスする権限を必要とします。
+                            </dd>
+                        </dl>
+                    </li>
+                </ul>
+            </div>
+            <p>
+                メール通知を受け取りたい時間とメールアドレスを入力して下さい。
+            </p>
+            <ul>
+                <? const restrictedDomain = PropertiesService.getScriptProperties().getProperty('RESTRICTED_DOMAIN'); ?>
+                <? if (restrictedDomain) { ?>
+                <li><strong><?= restrictedDomain ?> のメールアドレスは受信制限のためご利用いただけません。別のメールアドレスをご登録ください。</strong></li>
+                <? } ?>
+                <li><strong>初回設定時およびアドレス変更時はメールアドレスの確認とGoogle認証が必要です。</strong></li>
+                <li>システムの都合上、メールの送信は指定した時刻から±5分程度ずれる場合があります。</li>
+                <li>設定はログイン中の Google アカウント（<?= activeUserEmail ?>）に紐づいて保存されます。</li>
+                <? const senderEmail = PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL'); ?>
+                <? if (senderEmail) { ?>
+                <li>メールの送信元アドレスは <?= senderEmail ?> です。</li>
+                <? } ?>
+            </ul>
         </div>
 
         <div class="section">
@@ -205,48 +339,35 @@
             <p>
                 ここからテストメールを送信できます。指定したメールアドレスにメールが送信されることを確認してください。<br>
             </p>
-            <p>
-                ※メールが送信されない場合は、以下の原因が考えられます。
-            <ul>
-                <li>テストメールが迷惑メールと判断されている</li>
-                <li>メールアドレスが正しく入力されていない</li>
-                <li>メールアドレスが受信拒否設定されている</li>
-            </ul>
-            特に、迷惑メールと判断されている可能性が高いです。利用しているメールアプリの迷惑メールボックスにテストメールが入っていないか確認して下さい。
-            なお、メールの送信元は
-            <?= PropertiesService.getScriptProperties().getProperty('SENDER_EMAIL') ?> です。
-            </p>
             <div class="testMail-div">
                 <button type="button" id="testMail">テストメールを送信</button>
             </div>
-
         </div>
 
         <div class="section">
             <h2 id="privacyPolicy">プライバシーポリシー</h2>
             <p>
                 このシステムでは、ログイン中の Google アカウントが所属する Google Classroom クラスのお知らせや課題・資料にアクセスする権限を必要とします。
-                許可した権限は、「その他」→「このシステムから権限を削除」で許可を取り消すことができます。
-                ただし、必要な権限を許可しない場合、メール通知が届かない可能性があります。
-                なお、このシステムで必要とする全ての権限について、本サービス以外に利用することはありません。プライバシーポリシーに関して質問があれば、ページ下部の問い合わせフォームからご連絡ください。
-                <br>令和7年3月17日更新
+                許可した権限は、「その他」→「このシステムから権限を削除」でいつでも取り消すことができます。
+                なお、このシステムで必要とする全ての権限について、本サービス以外に利用することはありません。
             </p>
         </div>
 
         <div class="section">
             <h2>その他</h2>
             <ul>
-                <li><a href="" onclick="resetOAuth();">このシステムから権限を削除</a></li>
+                <li><a href="javascript:void(0)" onclick="resetOAuth();">このシステムから権限を削除</a></li>
             </ul>
         </div>
 
+        <? const formUrl = PropertiesService.getScriptProperties().getProperty('INQUIRY_FORM_URL'); ?>
+        <? if (formUrl) { ?>
         <div>
             <p class="formLink">
-                お問い合わせは<a href="https://forms.gle/958ymti7rCXjuVUq5">こちら</a>からどうぞ。<br>
-                <strong>メールの配信停止はこちらのフォームからお願いします。</strong><br>
-                ※学校の Google アカウントでログインしないと回答できません。
+                お問い合わせや配信停止依頼は<a href="<?= formUrl ?>" target="_blank" rel="noopener noreferrer">こちら</a>からどうぞ。
             </p>
         </div>
+        <? } ?>
     </div>
 
     <div class="footer">
@@ -254,85 +375,96 @@
             &copy; 2025 Miyanber
         </div>
         <p class="note">
-            Google Classroom は Google Inc. の商標です。
+            Google Classroom は Google LLC の商標です。本プロジェクトは Google LLC と提携または承認されたものではありません。
         </p>
     </div>
 
     <script>
         const form = document.getElementById('form');
         const submitButton = document.getElementById('submit');
-
         const testMailButton = document.getElementById('testMail');
-        testMailButton.addEventListener('click', () => {
-            testMailButton.disabled = true;
-            const email = document.getElementById('email').value;
-            google.script.run.withSuccessHandler(success => {
-                if (!success) {
-                    alert('メールが送信できません。先に設定を行ってください。既に設定を行っている場合は、メールアドレスに誤りがないか確認して下さい。');
-                    testMailButton.disabled = false;
-                } else {
-                    alert(`テストメールを送信しました。設定したメールアドレスにテストメールが届いていることを確認して下さい。`);
-                    testMailButton.disabled = false;
-                }
-            }).testMail();
-        });
-
         const emailInput = document.getElementById('email');
         const emailStatus = document.getElementById('emailStatus');
-        const currentEmail = emailInput.value;
-        const isVerified = emailStatus.classList.contains('verified');
-        function updateEmailStatus() {
-            const email = emailInput.value;
-            if (currentEmail && email === currentEmail && isVerified) {
-                emailStatus.textContent = '認証済み';
-                emailStatus.classList.add('verified');
-            } else if (email.includes("rakunan-h.ed.jp")) {
-                emailStatus.textContent = '利用不可';
-                emailStatus.classList.remove('verified');
-            } else {
-                emailStatus.textContent = '未認証';
-                emailStatus.classList.remove('verified');
-            }
+        const restrictedDomain = "<?= PropertiesService.getScriptProperties().getProperty('RESTRICTED_DOMAIN') || '' ?>";
+
+        if (testMailButton) {
+            testMailButton.addEventListener('click', () => {
+                testMailButton.disabled = true;
+                google.script.run.withSuccessHandler(success => {
+                    if (!success) {
+                        alert('メールが送信できません。先に利用登録設定を行ってください。');
+                    } else {
+                        alert('テストメールを送信しました。受信トレイ（または迷惑メールフォルダ）をご確認ください。');
+                    }
+                    testMailButton.disabled = false;
+                }).withFailureHandler(err => {
+                    alert('エラーが発生しました: ' + err.message);
+                    testMailButton.disabled = false;
+                }).testMail();
+            });
         }
-        updateEmailStatus();
-        emailInput.addEventListener('input', () => updateEmailStatus());
 
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            submitButton.disabled = true;
-            const time = document.getElementById('time').value;
-            const email = document.getElementById('email').value;
-            console.log(time);
-            if (time === '' || email === '') {
-                alert('フォームを入力してください。');
-                submitButton.disabled = false;
-                return;
-            } else if (email.includes("rakunan-h.ed.jp")) {
-                alert('学校の生徒用 Google アカウントのメールアドレス（rakunan-h.ed.jp）はメールを受信することができません。他のメールアドレスをご入力ください。');
-                submitButton.disabled = false;
-                return;
-            }
-            google.script.run.withSuccessHandler(result => {
-                if (result != null) {
-                    alert('通知時間・メールアドレスが設定できました。次に Google Classroom にアクセスする権限が必要です。次に表示される画面で権限を許可してください。');
-                    submitButton.disabled = false;
-                    window.open(result);
+        if (emailInput && emailStatus) {
+            const currentEmail = emailInput.value;
+            const isVerified = emailStatus.classList.contains('verified');
+            function updateEmailStatus() {
+                const email = emailInput.value.trim();
+                if (currentEmail && email === currentEmail && isVerified) {
+                    emailStatus.textContent = '認証済み';
+                    emailStatus.classList.add('verified');
+                } else if (restrictedDomain && email.includes(restrictedDomain)) {
+                    emailStatus.textContent = '利用不可ドメイン';
+                    emailStatus.classList.remove('verified');
                 } else {
-                    submitButton.disabled = false;
-                    alert('設定が完了しました。メールアドレスを設定・変更した場合は、一度テストメールを送信し、正しくメールを受け取れるかチェックすることをお勧めします。');
+                    emailStatus.textContent = '未認証';
+                    emailStatus.classList.remove('verified');
                 }
-            }).saveUnverifiedUser(time, email);
+            }
+            emailInput.addEventListener('input', updateEmailStatus);
+        }
 
-            console.log('submit');
-        });
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                submitButton.disabled = true;
+                const time = document.getElementById('time').value;
+                const email = document.getElementById('email').value.trim();
+
+                if (time === '' || email === '') {
+                    alert('通知時刻とメールアドレスを入力してください。');
+                    submitButton.disabled = false;
+                    return;
+                }
+                if (restrictedDomain && email.includes(restrictedDomain)) {
+                    alert(restrictedDomain + ' のメールアドレスは受信制限のためご利用いただけません。他のメールアドレスをご入力ください。');
+                    submitButton.disabled = false;
+                    return;
+                }
+
+                google.script.run.withSuccessHandler(result => {
+                    submitButton.disabled = false;
+                    if (result != null) {
+                        alert('通知時間・メールアドレスが設定できました。次に表示される画面で Google Classroom へのアクセス権限を許可してください。');
+                        window.open(result);
+                    } else {
+                        alert('設定を保存しました。メールアドレスを設定・変更した場合は、認証メールおよびテストメールをご確認ください。');
+                    }
+                }).withFailureHandler(err => {
+                    submitButton.disabled = false;
+                    alert('保存に失敗しました: ' + err.message);
+                }).saveUnverifiedUser(time, email);
+            });
+        }
 
         function resetOAuth() {
-            google.script.run.withSuccessHandler(result => {
-                alert('このシステムから権限を削除しました。ページをリロードして下さい。メールを受信したい場合は、再度設定を行ってください。');
-                submitButton.disabled = false;
+            if (!confirm('このシステムから連携権限を解除しますか？')) return;
+            google.script.run.withSuccessHandler(() => {
+                alert('連携権限を削除しました。再度通知を受け取る場合は再設定を行ってください。');
+                location.reload();
+            }).withFailureHandler(err => {
+                alert('権限削除に失敗しました: ' + err.message);
             }).resetOAuth();
         }
-
     </script>
 </body>
 

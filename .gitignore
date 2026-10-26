@@ -1,8 +1,27 @@
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+.clasp.json
+.clasprc.json
+*credential*.json
+*secret*.json
+
+# Dependencies & Build
+node_modules/
 package.json
 package-lock.json
-node_modules/
+
+# Test & Hint
 test.json
 test/
-test/test.html
-.clasp.json
 .hintrc
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.log
